@@ -1,0 +1,62 @@
+# Query: /prisma
+# ContextLines: 1
+
+14 results - 12 files
+
+backend\package-lock.json:
+  2333      },
+  2334:     "node_modules/libs/prisma": {
+  2335        "version": "5.22.0",
+  2336:       "resolved": "https://registry.npmjs.org/prisma/-/prisma-5.22.0.tgz",
+  2337        "integrity": "sha512-vtpjW3XuYCSnMsNVBjLMNkTj6OZbudcPPTPYHqX0CJfpcdWciI1dM8uHETwmDxxiqEwCIE6WvXucWUetJgfu/A==",
+
+backend\prisma\schema.prisma:
+  1  // This is your Prisma schema file,
+  2: // learn more about it in the docs: https://pris.ly/d/prisma-schema
+  3  
+
+backend\src\controllers\document.controller.ts:
+  1  import { Request, Response } from 'express';
+  2: import prisma from '../lib/prisma';
+  3  import fs from 'fs';
+
+backend\src\controllers\regulation.controller.ts:
+  1  import { Request, Response } from 'express';
+  2: import prisma from '../lib/prisma';
+  3  import { regulationService } from '../services/regulation.service';
+
+backend\src\controllers\substance.controller.ts:
+  1  import { Request, Response } from 'express';
+  2: import prisma from '../lib/prisma';
+  3  import { vorsorgeService } from '../services/vorsorge.service';
+
+backend\src\controllers\tenant.controller.ts:
+  1  import { Request, Response } from 'express';
+  2: import prisma from '../lib/prisma';
+  3  
+
+backend\src\controllers\video.controller.ts:
+  4  import fs from 'fs';
+  5: import prisma from '../lib/prisma';
+  6  import { auditLogService } from '../services/auditLog.service';
+
+backend\src\routes\admin.routes.ts:
+  2  import { verifyRole } from '../middleware/auth.middleware';
+  3: import { prisma } from '../lib/prisma';
+  4  
+
+backend\src\services\auditLog.service.ts:
+  1: import prisma from '../prisma';
+  2  import crypto from 'crypto';
+
+backend\src\services\regulation.service.ts:
+  1: import prisma from '../prisma';
+  2  import { auditLogService } from './auditLog.service';
+
+backend\src\services\snapshot.service.ts:
+  1: import prisma from '../prisma';
+  2  import crypto from 'crypto';
+
+backend\src\services\vorsorge.service.ts:
+  1: import prisma from '../libs/prisma';
+  2  

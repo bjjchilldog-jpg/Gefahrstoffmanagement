@@ -1,0 +1,501 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// --- Modul 1: Mandanten ---
+model Tenant {
+  id        String     @id @default(uuid())
+  name      String
+  
+  // Modul 15: Vererbbare Zuständigkeiten (Default für alle Unterebenen)
+  sifaName         String?
+  betriebsarztName String?
+  auditorName      String?
+
+  // Modul: SDB Management & Fristen
+  sdbReviewMode    String   @default("INDIVIDUAL") // INDIVIDUAL oder MASS
+  sdbMassReviewDate DateTime? // Globaler Stichtag für Massenprüfung
+
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  locations Location[]
+  documents Document[]
+  legalSettings LegalSettings?
+}
+
+// --- Modul 13: Impressum & DSGVO ---
+model LegalSettings {
+  id              String @id @default(uuid())
+  tenantId        String @unique
+  tenant          Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  companyName     String
+  legalForm       String
+  representatives String
+  address         String
+  contact         String
+  registerInfo    String?
+  primaryColor    String?  @default("#0f172a")
+  logoBase64      String?  // base64 encoded image
+  aiProvider      String?
+  aiApiKey        String?
+}
+
+model Location {
+  id        String @id @default(uuid())
+  name      String
+  tenantId  String
+  tenant    Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  // Modul 15: Vererbbare Zuständigkeiten (Override für diesen Standort)
+  sifaName         String?
+  betriebsarztName String?
+  auditorName      String?
+
+  constructionYear Int?
+  asbestosStatus   String? 
+
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  workAreas    WorkArea[]
+  documents    Document[]
+  asbestosFindings AsbestosFinding[]
+  RevisionTask RevisionTask[]
+}
+
+// --- Modul 23: Asbest-Kataster (TRGS 519) ---
+model AsbestosFinding {
+  id          String   @id @default(uuid())
+  locationId  String
+  location    Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  component   String   // z.B. Floor-Flex-Platten, Fliesenkleber
+  exactSpot   String   // Freitext, z.B. "Heizungskeller, Wand X"
+  status      String   // z.B. "Suspected", "Confirmed", "Remediated"
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model WorkArea {
+  id         String   @id @default(uuid())
+  name       String
+  locationId String
+  location   Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+
+  // Hierarchie (Unterbereiche)
+  parentId   String?
+  parent     WorkArea?  @relation("WorkAreaHierarchy", fields: [parentId], references: [id])
+  children   WorkArea[] @relation("WorkAreaHierarchy")
+
+  // Modul 15: Vererbbare Zuständigkeiten (Override für diesen Arbeitsbereich)
+  sifaName         String?
+  betriebsarztName String?
+  auditorName      String?
+
+  // Modul 4: Vorsorge-Planer
+  isFeuchtarbeit      Boolean @default(false)
+  dailyExposureHours  Float?
+
+  // Finale Module: Staub & Gas
+  dustExposureType String?
+  gasType          String?
+  roomVolume       Float?
+
+  // Modul 6: Audit & Inventory
+  inventories      LocalSubstanceInventory[]
+  auditLogs        AuditLog[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  hazardousSubstances  HazardousSubstance[]
+  biologicalSubstances BiologicalSubstance[]
+  documents            Document[]
+  vorsorgeReports      VorsorgeReport[]
+  snapshots            GbuSnapshot[]
+}
+
+// --- Modul 6: User & RBAC ---
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String
+  // SQLite kompatibel: Role als einfacher String
+  role         String   @default("VIEWER") 
+  preferences  String?  // JSON String für UI-Settings (z.B. ausgeblendete Spalten)
+  
+  auditLogs    AuditLog[]
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+// --- Modul 6: Daten-Trennung (Phase 1) ---
+model HazardousSubstanceMaster {
+  id           String   @id @default(uuid())
+  productName  String
+  manufacturer String?
+  substanceType String  @default("GEFAHRSTOFF") // GEFAHRSTOFF, BIOSTOFF, ASBEST, HAUTSCHUTZ, GASFLASCHE
+  isMixture    Boolean  @default(false)
+  hPhrases     String   
+  emkgRating   String?
+  agwValue     String?  // Auch für MAK, DNEL, BGW
+  wgk          Int?     // 1, 2, 3
+  storageClass String?  // TRGS 510 LGK (z.B. "3", "8A", "10")
+  chemicalType String?  // SÄURE, LAUGE, SONSTIGES (für TRGS 510)
+  
+  // Modul: SDB Management & Fristen
+  sdbDate                DateTime?
+  nextReviewDate         DateTime?
+  responsiblePerson      String?
+  autoMailToManufacturer Boolean   @default(false)
+  
+  isKrebserzeugend       Boolean @default(false)
+  isMutagen              Boolean @default(false)
+  isReproduktionstoxisch Boolean @default(false)
+  isMutterschutzRelevant Boolean @default(false)
+  isJugendschutzRelevant Boolean @default(false)
+  isAcuteToxic           Boolean @default(false)
+
+  inventories            LocalSubstanceInventory[]
+  employeeExposures      EmployeeExposure[]
+  trainingModules        TrainingModule[]
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+}
+
+model LocalSubstanceInventory {
+  id                String   @id @default(uuid())
+  workAreaId        String
+  workArea          WorkArea @relation(fields: [workAreaId], references: [id], onDelete: Cascade)
+  
+  masterSubstanceId String
+  masterSubstance   HazardousSubstanceMaster @relation(fields: [masterSubstanceId], references: [id])
+  
+  annualAmount      Float?   // Menge für Unit Leader
+  usageDescription  String?  // Lokaler Zweck
+  mediaUrls         String?  // SQLite kompatibel: String statt String[]
+  status            String   @default("ACTIVE")
+  
+  // Modul 15: Zuständigkeiten (Spezifischer Override für diesen Stoff)
+  sifaName         String?
+  betriebsarztName String?
+  involvedPersons  String? // Beteiligte Personen bei der GBU
+
+  // Modul 8: Compliance-Felder
+  substitutionCheck String?  // TRGS 600
+  maxStorageAmount  Float?   // TRGS 510
+
+  // Modul 9: Dynamische Datenfelder
+  customFields      String?  // SQLite: JSON als Text speichern
+
+  // Modul 18: Four-Eyes Principle (Juristische Freigabe)
+  juridicalApprovalBy String?
+  juridicalApprovalAt DateTime?
+
+  // Modul 20: GBU & EMKG Daten (BauA)
+  activityName      String?
+  physicalState     String?  // Feststoff, Flüssigkeit, Gas
+  emkgInhalation    String?
+  emkgSkin          String?
+  emkgFire          String?
+  
+  // Modul 20: STOP-Prinzip Maßnahmen
+  stopSubstitution  String?
+  stopTechnical     String?
+  stopOrganizational String?
+  stopPersonal      String?
+  reviewDate        DateTime?
+
+  // Dynamische Weichen (Biostoffe, Asbest)
+  bioTargetedActivity Boolean?
+  bioRiskGroup        String?
+  asbestosActivity    String? // "Grosstätigkeit", "Kleinsttätigkeit"
+  asbestosBinding     String? // "Fest", "Schwach"
+  btVerfahren         String?
+  gasStorageType      String?
+
+  // TRGS 401 (Hautschutz & Feuchtarbeit)
+  skinDirtType        String? // wasserlöslich, fettlöslich, haftend
+  skinCleaningAgents  String? // mild, lösemittel, abrasiva, kombi
+  skinWashingFreq     String? // <5, 5-15, >15
+  skinGloveDuration   String? // <2h, 2-4h, >4h
+
+  notes               String? // Eigene Bemerkungen des Nutzers
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  
+  media             SubstanceMedia[]
+  documents         Document[]
+  effectivenessChecks EffectivenessCheck[]
+}
+
+// Modul 20: EMKG Wirksamkeitsprüfung (Schutzleitfäden)
+model EffectivenessCheck {
+  id              String   @id @default(uuid())
+  inventoryId     String
+  inventory       LocalSubstanceInventory @relation(fields: [inventoryId], references: [id], onDelete: Cascade)
+  
+  guidelineCode   String
+  title           String
+  auditor         String?
+  checkedAt       DateTime?
+  nextReviewDate  DateTime?
+  notes           String?
+  isActive        Boolean  @default(true)
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+// Modul: Medien & Notizen
+model SubstanceMedia {
+  id              String   @id @default(uuid())
+  inventoryId     String
+  inventory       LocalSubstanceInventory @relation(fields: [inventoryId], references: [id])
+  mediaType       String   @default("IMAGE") // IMAGE, VIDEO
+  url             String
+  description     String?
+  
+  createdAt       DateTime @default(now())
+}
+
+// Modul: Dokumenten-Center (Betriebsanweisungen, Hautschutzpläne)
+model OperatingInstruction {
+  id              String   @id @default(uuid())
+  title           String
+  documentType    String   @default("BETRIEBSANWEISUNG") // BA, HAUTSCHUTZPLAN, GEFAEHRDUNGSBEURTEILUNG
+  level           String   @default("TENANT") // GLOBAL, TENANT, WORK_AREA
+  tenantId        String?
+  workAreaId      String?
+  fileUrl         String   // Pfad/Mock-URL zum Dokument
+  isApprovedByAdmin Boolean @default(false)
+  uploadedBy      String?
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+// --- Audit-Log (Modul 6) ---
+model AuditLog {
+  id        String   @id @default(uuid())
+  action    String   
+  details   String
+  hashRef   String?  
+  hash      String?  
+  entityId  String?  
+  
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  
+  workAreaId String?
+  workArea   WorkArea? @relation(fields: [workAreaId], references: [id])
+  
+  ipAddress String
+  timestamp DateTime @default(now())
+}
+
+// --- Restliche Bestandsmodelle (Migration ausstehend) ---
+model HazardousSubstance {
+  id           String   @id @default(uuid())
+  productName  String
+  manufacturer String?
+  hPhrases     String 
+  emkgRating   String?
+  agwValue     String? 
+  workAreaId   String
+  workArea     WorkArea @relation(fields: [workAreaId], references: [id], onDelete: Cascade)
+
+  isKrebserzeugend       Boolean @default(false)
+  isMutagen              Boolean @default(false)
+  isReproduktionstoxisch Boolean @default(false)
+  isMutterschutzRelevant Boolean @default(false)
+  isJugendschutzRelevant Boolean @default(false)
+  isAcuteToxic           Boolean @default(false)
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  documents      Document[]
+  vorsorgeReports VorsorgeReport[]
+  revisionTasks  RevisionTask[]
+}
+
+model BiologicalSubstance {
+  id              String   @id @default(uuid())
+  name            String
+  riskGroup       Int
+  protectionLevel Int
+  isTargetedActivity Boolean @default(false)
+  transmissionPath   String?
+  vaccinationOffer   String?
+  workAreaId      String
+  workArea        WorkArea @relation(fields: [workAreaId], references: [id], onDelete: Cascade)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  documents       Document[]
+}
+
+model Document {
+  id           String @id @default(uuid())
+  originalName String
+  filename     String
+  path         String
+  mimeType     String
+  docType      String
+
+  tenantId              String?
+  tenant                Tenant?             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  locationId            String?
+  location              Location?           @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  workAreaId            String?
+  workArea              WorkArea?           @relation(fields: [workAreaId], references: [id], onDelete: Cascade)
+  hazardousSubstanceId  String?
+  hazardousSubstance    HazardousSubstance? @relation(fields: [hazardousSubstanceId], references: [id], onDelete: Cascade)
+  biologicalSubstanceId String?
+  biologicalSubstance   BiologicalSubstance? @relation(fields: [biologicalSubstanceId], references: [id], onDelete: Cascade)
+  inventoryId           String?
+  inventory             LocalSubstanceInventory? @relation(fields: [inventoryId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model VorsorgeReport {
+  id                   String              @id @default(uuid())
+  workAreaId           String
+  workArea             WorkArea            @relation(fields: [workAreaId], references: [id], onDelete: Cascade)
+  hazardousSubstanceId String?
+  hazardousSubstance   HazardousSubstance? @relation(fields: [hazardousSubstanceId], references: [id], onDelete: Cascade)
+
+  type                 String 
+  trigger              String
+  status               String @default("Offen")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Regulation {
+  id              String  @id @default(uuid())
+  ruleId          String
+  category        String
+  triggerHPhrases String
+  isMutterschutzRelevant Boolean @default(false)
+  isJugendschutzRelevant Boolean @default(false)
+  isAsbestRelevant        Boolean @default(false)
+  reference       String
+  muSchGNote      String?
+
+  limitValue  String?
+  versionDate DateTime @default(now())
+  status      String   @default("ACTIVE")
+
+  revisionTasks RevisionTask[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+}
+
+model RevisionTask {
+  id           String     @id @default(uuid())
+  regulationId String?
+  regulation   Regulation? @relation(fields: [regulationId], references: [id], onDelete: Cascade)
+
+  hazardousSubstanceId String?
+  hazardousSubstance   HazardousSubstance? @relation(fields: [hazardousSubstanceId], references: [id], onDelete: Cascade)
+
+  locationId String?
+  location   Location? @relation(fields: [locationId], references: [id], onDelete: Cascade)
+
+  status       String @default("PENDING")
+  adminComment String?
+  confirmedBy  String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model GbuSnapshot {
+  id           String   @id @default(uuid())
+  workAreaId   String
+  workArea     WorkArea @relation(fields: [workAreaId], references: [id], onDelete: Cascade)
+  snapshotData String
+  snapshotHash String   @unique
+  reason       String
+  createdAt    DateTime @default(now())
+}
+
+// --- Modul 21: Personal & ArbMedVV (ZED/ODIN) ---
+
+model Employee {
+  id              String             @id @default(uuid())
+  firstName       String
+  lastName        String
+  employeeNumber  String?            // Personalnummer
+  dateOfBirth     DateTime?
+  department      String?            // z.B. "Haustechnik"
+  exposures       EmployeeExposure[]
+  trainingRecords EmployeeTrainingRecord[]
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+}
+
+model EmployeeExposure {
+  id                 String                   @id @default(uuid())
+  employeeId         String
+  employee           Employee                 @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  
+  masterSubstanceId  String
+  masterSubstance    HazardousSubstanceMaster @relation(fields: [masterSubstanceId], references: [id], onDelete: Cascade)
+  
+  exposureType       String                   @default("GEFAHRSTOFF") // GEFAHRSTOFF, BIOSTOFF
+  vorsorgeFrist      String?                  // z.B. "G 24 Haut", "G 20 Lärm"
+  nextVorsorgeDate   DateTime?
+  notes              String?
+  assignedAt         DateTime                 @default(now())
+}
+
+// --- Modul 22: LMS & Unterweisungen ---
+model TrainingModule {
+  id              String   @id @default(uuid())
+  title           String
+  description     String?
+  targetAudience  String?  // z.B. "Alle", "Reinigungskräfte", "Asbest-Sanierer"
+  
+  // Verknüpfung zu Gefährdungsquellen (Gefahrstoff, Biostoff, Asbest)
+  hazardousSubstanceId String?
+  hazardousSubstance   HazardousSubstanceMaster? @relation(fields: [hazardousSubstanceId], references: [id], onDelete: SetNull)
+  
+  content         String?  // JSON string für Folien/Text (Admin-Editor)
+  quizQuestions   String?  // JSON string für Quiz-Fragen
+  
+  externalFormUrl String?  // Optionaler Link zu MS/Google Forms
+  webhookSecret   String?  // Für sichere Übertragung von externen Formularen
+  
+  records         EmployeeTrainingRecord[]
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model EmployeeTrainingRecord {
+  id               String         @id @default(uuid())
+  employeeId       String
+  employee         Employee       @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  trainingModuleId String
+  trainingModule   TrainingModule @relation(fields: [trainingModuleId], references: [id], onDelete: Cascade)
+  
+  status           String         @default("ASSIGNED") // ASSIGNED, IN_PROGRESS, COMPLETED, FAILED
+  score            Float?
+  completedAt      DateTime?
+  validUntil       DateTime?
+  certificateHash  String?        // Fälschungssicherer Hash
+
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+}
