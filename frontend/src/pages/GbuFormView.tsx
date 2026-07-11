@@ -193,7 +193,7 @@ export const GbuFormView = () => {
   ];
 
   useEffect(() => {
-    fetch('http://localhost:3000/api/employees')
+    fetch('/api/employees')
       .then(res => res.json())
       .then(data => setAllEmployees(data))
       .catch(console.error);
@@ -202,7 +202,7 @@ export const GbuFormView = () => {
   // Abteilungsspezifische Zuständigkeiten beim Laden abrufen
   useEffect(() => {
     if (id) {
-      fetch('http://localhost:3000/api/tenants')
+      fetch('/api/tenants')
         .then(res => res.json())
         .then(tenants => {
           let foundWa = null;
@@ -241,7 +241,7 @@ export const GbuFormView = () => {
 
   useEffect(() => {
     if (inventoryId) {
-      fetch(`http://localhost:3000/api/substances/inventory/${inventoryId}`, {
+      fetch(`/api/substances/inventory/${inventoryId}`, {
         headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
       })
       .then(res => res.json())
@@ -262,7 +262,7 @@ export const GbuFormView = () => {
           setSdbDate(data.masterSubstance?.sdbDate ? data.masterSubstance.sdbDate.split('T')[0] : '');
           if (data.masterSubstance?.sdbFilePath) {
             setSdbFilePath(data.masterSubstance.sdbFilePath);
-            setSdbPreviewUrl(`http://localhost:3000${data.masterSubstance.sdbFilePath}`);
+            setSdbPreviewUrl(`${data.masterSubstance.sdbFilePath}`);
           }
           setNextReviewDate(data.masterSubstance?.nextReviewDate ? data.masterSubstance.nextReviewDate.split('T')[0] : '');
           setResponsiblePerson(data.masterSubstance?.responsiblePerson || '');
@@ -531,7 +531,7 @@ export const GbuFormView = () => {
   const handleSaveWorkAreaDefaults = async () => {
     if (!id) return;
     try {
-      const response = await fetch(`http://localhost:3000/api/tenants/work-areas/${id}`, {
+      const response = await fetch(`/api/tenants/work-areas/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token')}` },
         body: JSON.stringify({
@@ -553,7 +553,7 @@ export const GbuFormView = () => {
   const handleApplyWorkAreaDefaultsToAll = async () => {
     if (!id) return;
     try {
-      const response = await fetch(`http://localhost:3000/api/substances/workarea/${id}/bulk-persons`, {
+      const response = await fetch(`/api/substances/workarea/${id}/bulk-persons`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -662,7 +662,7 @@ export const GbuFormView = () => {
             }))
           };
           fetchPromises.push(
-            fetch(inventoryId ? `http://localhost:3000/api/substances/${inventoryId}` : `http://localhost:3000/api/substances`, {
+            fetch(inventoryId ? `/api/substances/${inventoryId}` : `/api/substances`, {
               method: inventoryId ? 'PUT' : 'POST',
               headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token')}` },
               body: JSON.stringify(hazardPayload)
@@ -693,7 +693,7 @@ export const GbuFormView = () => {
             }))
           };
           fetchPromises.push(
-            fetch(inventoryId ? `http://localhost:3000/api/substances/${inventoryId}` : `http://localhost:3000/api/substances`, {
+            fetch(inventoryId ? `/api/substances/${inventoryId}` : `/api/substances`, {
               method: inventoryId ? 'PUT' : 'POST',
               headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token')}` },
               body: JSON.stringify(customPayload)
@@ -784,7 +784,7 @@ export const GbuFormView = () => {
           ...payload
       };
 
-      const response = await fetch(inventoryId ? `http://localhost:3000/api/substances/${inventoryId}` : `http://localhost:3000/api/substances`, {
+      const response = await fetch(inventoryId ? `/api/substances/${inventoryId}` : `/api/substances`, {
         method: inventoryId ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token')}` },
         body: JSON.stringify(payloadData)
@@ -888,7 +888,7 @@ export const GbuFormView = () => {
                               const formData = new FormData();
                               formData.append('sdbFile', file);
                               
-                              const res = await fetch('http://localhost:3000/api/sdb/parse', {
+                              const res = await fetch('/api/sdb/parse', {
                                 method: 'POST',
                                 body: formData
                               });
@@ -1036,7 +1036,7 @@ export const GbuFormView = () => {
                               const formData = new FormData();
                               formData.append('file', file);
                               try {
-                                const res = await fetch('http://localhost:3000/api/upload', { method: 'POST', body: formData });
+                                const res = await fetch('/api/upload', { method: 'POST', body: formData });
                                 const data = await res.json();
                                 if (res.ok) setSdbFilePath(data.url);
                               } catch (err) { alert('Fehler beim Upload des SDBs'); }

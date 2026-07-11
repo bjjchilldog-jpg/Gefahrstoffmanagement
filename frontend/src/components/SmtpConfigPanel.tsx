@@ -94,7 +94,7 @@ export const SmtpConfigPanel = ({ settings, onSettingsChange }: SmtpConfigPanelP
     setTesting(true);
     setTestResult(null);
     try {
-      const res = await fetch('http://localhost:3000/api/settings/smtp/test', {
+      const res = await fetch('/api/settings/smtp/test', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

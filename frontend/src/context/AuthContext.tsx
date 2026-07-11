@@ -50,7 +50,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
 
     // Validate token and get user info
-    fetch('http://localhost:3000/api/auth/me', {
+    fetch('/api/auth/me', {
       headers: { 'Authorization': `Bearer ${token}` }
     })
       .then(res => {

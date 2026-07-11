@@ -47,9 +47,9 @@ export const UserManager = () => {
     setError('');
     try {
       const [usersRes, pendingRes, tenantsRes] = await Promise.all([
-        fetch('http://localhost:3000/api/users', { headers }),
-        fetch('http://localhost:3000/api/users/pending', { headers }),
-        fetch('http://localhost:3000/api/tenants')
+        fetch('/api/users', { headers }),
+        fetch('/api/users/pending', { headers }),
+        fetch('/api/tenants')
       ]);
       
       if (!usersRes.ok) throw new Error('Fehler beim Laden der Benutzer');
@@ -80,7 +80,7 @@ export const UserManager = () => {
   const handleApprove = async (userId: string) => {
     setActionLoading(userId);
     try {
-      const res = await fetch(`http://localhost:3000/api/users/${userId}/approve`, {
+      const res = await fetch(`/api/users/${userId}/approve`, {
         method: 'POST', headers,
         body: JSON.stringify({ role: selectedRole, locationIds: selectedLocations })
       });
@@ -100,7 +100,7 @@ export const UserManager = () => {
     if (!confirm('Benutzer wirklich sperren? Der Zugang wird sofort deaktiviert.')) return;
     setActionLoading(userId);
     try {
-      const res = await fetch(`http://localhost:3000/api/users/${userId}/suspend`, {
+      const res = await fetch(`/api/users/${userId}/suspend`, {
         method: 'POST', headers
       });
       const data = await res.json();
@@ -114,7 +114,7 @@ export const UserManager = () => {
   const handleRoleChange = async (userId: string, newRole: string) => {
     setActionLoading(userId);
     try {
-      const res = await fetch(`http://localhost:3000/api/users/${userId}/role`, {
+      const res = await fetch(`/api/users/${userId}/role`, {
         method: 'PUT', headers,
         body: JSON.stringify({ role: newRole })
       });
@@ -141,7 +141,7 @@ export const UserManager = () => {
   const saveUserLocations = async (userId: string) => {
     setActionLoading(userId);
     try {
-      const res = await fetch(`http://localhost:3000/api/users/${userId}/locations`, {
+      const res = await fetch(`/api/users/${userId}/locations`, {
         method: 'PUT', headers,
         body: JSON.stringify({ locationIds: selectedLocations })
       });

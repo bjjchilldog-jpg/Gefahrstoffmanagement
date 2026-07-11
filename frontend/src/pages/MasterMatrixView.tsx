@@ -18,7 +18,7 @@ export const MasterMatrixView = () => {
   const [reverseLoading, setReverseLoading] = useState(false);
 
   useEffect(() => {
-    fetch('http://localhost:3000/api/matrix?tenantId=default-tenant-id', {
+    fetch('/api/matrix?tenantId=default-tenant-id', {
       headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
     })
     .then(res => res.json())
@@ -65,7 +65,7 @@ export const MasterMatrixView = () => {
       }
     }
     try {
-      await fetch('http://localhost:3000/api/matrix/assign', {
+      await fetch('/api/matrix/assign', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -86,7 +86,7 @@ export const MasterMatrixView = () => {
     if (!reverseSubstanceId) return;
     setReverseLoading(true);
     try {
-      const res = await fetch(`http://localhost:3000/api/matrix/reverse?substanceId=${reverseSubstanceId}`, {
+      const res = await fetch(`/api/matrix/reverse?substanceId=${reverseSubstanceId}`, {
         headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
       });
       const result = await res.json();

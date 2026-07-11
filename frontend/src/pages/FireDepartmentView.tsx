@@ -6,7 +6,7 @@ export const FireDepartmentView = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch('http://localhost:3000/api/export/fire-dept')
+    fetch('/api/export/fire-dept')
       .then(res => res.json())
       .then(data => {
         setData(data);

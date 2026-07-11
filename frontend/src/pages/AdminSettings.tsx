@@ -29,7 +29,7 @@ export const AdminSettings = () => {
   const { toast } = useToast();
 
   useEffect(() => {
-    fetch(`http://localhost:3000/api/settings/${tenantId}`)
+    fetch(`/api/settings/${tenantId}`)
       .then(res => res.json())
       .then(data => {
         if (data && !data.error) setSettings(prev => ({ ...prev, ...data }));
@@ -45,7 +45,7 @@ export const AdminSettings = () => {
     e.preventDefault();
     setSaving(true);
     try {
-      const res = await fetch(`http://localhost:3000/api/settings/${tenantId}`, {
+      const res = await fetch(`/api/settings/${tenantId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -182,13 +182,13 @@ export const AdminSettings = () => {
                 Erstellen Sie hier ein vollständiges ZIP/JSON-Backup der Datenbank.
               </p>
               <div className="flex gap-4 flex-wrap">
-                <button type="button" onClick={() => { window.location.href = 'http://localhost:3000/api/backup/export'; }}
+                <button type="button" onClick={() => { window.location.href = '/api/backup/export'; }}
                   className="bg-indigo-100 hover:bg-indigo-200 text-indigo-800 px-6 py-3 rounded-lg font-bold flex items-center gap-2 transition-colors">
                   <Download className="w-5 h-5" /> Datenbank exportieren (JSON)
                 </button>
                 <button type="button" onClick={async () => {
                   const token = localStorage.getItem('token');
-                  const res = await fetch('http://localhost:3000/api/backup/bundle', {
+                  const res = await fetch('/api/backup/bundle', {
                     headers: { 'Authorization': `Bearer ${token}` }
                   });
                   if (res.ok) {
@@ -213,7 +213,7 @@ export const AdminSettings = () => {
                     reader.onload = async (event) => {
                       try {
                         const json = JSON.parse(event.target?.result as string);
-                        const res = await fetch('http://localhost:3000/api/backup/import', {
+                        const res = await fetch('/api/backup/import', {
                           method: 'POST', headers: { 'Content-Type': 'application/json' },
                           body: JSON.stringify(json)
                         });
@@ -245,7 +245,7 @@ export const AdminSettings = () => {
                     const formData = new FormData();
                     formData.append('file', file);
                     try {
-                      const res = await fetch('http://localhost:3000/api/users/import', {
+                      const res = await fetch('/api/users/import', {
                         method: 'POST',
                         headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` },
                         body: formData
@@ -296,7 +296,7 @@ export const AdminSettings = () => {
               reader.onload = async (ev) => {
                 try {
                   const bundle = JSON.parse(ev.target?.result as string);
-                  const res = await fetch('http://localhost:3000/api/lms/import-offline-bundle', {
+                  const res = await fetch('/api/lms/import-offline-bundle', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token')}` },
                     body: JSON.stringify(bundle)
@@ -461,18 +461,18 @@ const CustomFieldsSection = () => {
 const SsoConfigPanel = () => {
   const [sso, setSso] = useState({
     ssoEnabled: false, ssoProvider: 'oidc', ssoClientId: '', ssoClientSecret: '',
-    ssoIssuerUrl: '', ssoCallbackUrl: 'http://localhost:3000/api/auth/sso/callback', ssoGroupMapping: ''
+    ssoIssuerUrl: '', ssoCallbackUrl: '/api/auth/sso/callback', ssoGroupMapping: ''
   });
   const [mappings, setMappings] = useState<{ id: string; adGroupName: string; systemRole: string }[]>([]);
   const [newMapping, setNewMapping] = useState({ adGroupName: '', systemRole: 'VIEWER' });
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    fetch('http://localhost:3000/api/auth/sso/config', {
+    fetch('/api/auth/sso/config', {
       headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
     }).then(r => r.json()).then(data => { if (data && !data.error) setSso(prev => ({ ...prev, ...data })); }).catch(() => {});
     
-    fetch('http://localhost:3000/api/auth/sso/mappings', {
+    fetch('/api/auth/sso/mappings', {
       headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
     }).then(r => r.json()).then(data => { if (Array.isArray(data)) setMappings(data); }).catch(() => {});
   }, []);
@@ -480,7 +480,7 @@ const SsoConfigPanel = () => {
   const saveSso = async () => {
     setSaving(true);
     try {
-      await fetch('http://localhost:3000/api/auth/sso/config', {
+      await fetch('/api/auth/sso/config', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token')}` },
         body: JSON.stringify(sso)
@@ -493,7 +493,7 @@ const SsoConfigPanel = () => {
   const addMapping = async () => {
     if (!newMapping.adGroupName) return;
     try {
-      const res = await fetch('http://localhost:3000/api/auth/sso/mappings', {
+      const res = await fetch('/api/auth/sso/mappings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token')}` },
         body: JSON.stringify(newMapping)
@@ -507,7 +507,7 @@ const SsoConfigPanel = () => {
   };
 
   const deleteMapping = async (id: string) => {
-    await fetch(`http://localhost:3000/api/auth/sso/mappings/${id}`, {
+    await fetch(`/api/auth/sso/mappings/${id}`, {
       method: 'DELETE', headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
     });
     setMappings(mappings.filter(m => m.id !== id));

@@ -35,7 +35,7 @@ export const MobileAppView = () => {
   const loadHierarchy = async () => {
     try {
       if (navigator.onLine) {
-        const res = await fetch('http://localhost:3000/api/tenants');
+        const res = await fetch('/api/tenants');
         const data = await res.json();
         setTenants(data);
         saveHierarchyCache(data); // In IndexedDB speichern
@@ -104,7 +104,7 @@ export const MobileAppView = () => {
 
     setIsSyncing(true);
     try {
-      const res = await fetch('http://localhost:3000/api/mobile/sync', {
+      const res = await fetch('/api/mobile/sync', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ scans: pendingScans })

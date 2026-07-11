@@ -25,7 +25,7 @@ export const LmsEmployeeView = () => {
 
   const fetchRecords = async (empId: string, token: string) => {
     try {
-      const res = await fetch(`http://localhost:3000/api/lms/records/${empId}`, {
+      const res = await fetch(`/api/lms/records/${empId}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (!res.ok) {
@@ -54,7 +54,7 @@ export const LmsEmployeeView = () => {
   const submitQuiz = async (passed: boolean) => {
     try {
       const token = localStorage.getItem('lmsToken');
-      const res = await fetch(`http://localhost:3000/api/lms/records/${activeCourse.id}/submit`, {
+      const res = await fetch(`/api/lms/records/${activeCourse.id}/submit`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',

@@ -31,7 +31,7 @@ export const LocationDetailView = () => {
   const fetchData = async () => {
     try {
       const token = localStorage.getItem('token') || '';
-      const res = await fetch('http://localhost:3000/api/tenants', {
+      const res = await fetch('/api/tenants', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const tenants = await res.json();
@@ -59,7 +59,7 @@ export const LocationDetailView = () => {
   const fetchEmployees = async () => {
     try {
       const token = localStorage.getItem('token') || '';
-      const res = await fetch('http://localhost:3000/api/employees', {
+      const res = await fetch('/api/employees', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const data = await res.json();
@@ -72,7 +72,7 @@ export const LocationDetailView = () => {
   const handleSave = async () => {
     try {
       const token = localStorage.getItem('token') || '';
-      await fetch(`http://localhost:3000/api/tenants/locations/${id}`, {
+      await fetch(`/api/tenants/locations/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({
@@ -89,7 +89,7 @@ export const LocationDetailView = () => {
 
   const handleSaveFinding = async () => {
     try {
-      await fetch(`http://localhost:3000/api/tenants/locations/${id}/asbestos`, {
+      await fetch(`/api/tenants/locations/${id}/asbestos`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -120,7 +120,7 @@ export const LocationDetailView = () => {
   const handleDeleteFinding = async (findingId: string) => {
     if (!confirm('Wirklich löschen?')) return;
     try {
-      await fetch(`http://localhost:3000/api/tenants/locations/asbestos/${findingId}`, {
+      await fetch(`/api/tenants/locations/asbestos/${findingId}`, {
         method: 'DELETE'
       });
       fetchData();

@@ -20,7 +20,7 @@ export const LmsAdminView = () => {
 
   const fetchEmployees = async () => {
     try {
-      const res = await fetch('http://localhost:3000/api/employees');
+      const res = await fetch('/api/employees');
       const data = await res.json();
       setEmployees(data);
     } catch (error) {
@@ -30,7 +30,7 @@ export const LmsAdminView = () => {
 
   const fetchModules = async () => {
     try {
-      const res = await fetch('http://localhost:3000/api/lms/modules');
+      const res = await fetch('/api/lms/modules');
       const data = await res.json();
       setModules(data);
     } catch (error) {
@@ -40,7 +40,7 @@ export const LmsAdminView = () => {
 
   const handleCreateNew = async () => {
     try {
-      const res = await fetch('http://localhost:3000/api/lms/modules', {
+      const res = await fetch('/api/lms/modules', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -60,7 +60,7 @@ export const LmsAdminView = () => {
 
   const handleCopyModule = async (modToCopy: any) => {
     try {
-      const res = await fetch('http://localhost:3000/api/lms/modules', {
+      const res = await fetch('/api/lms/modules', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -82,7 +82,7 @@ export const LmsAdminView = () => {
   const handleSave = async (silent = false) => {
     if (!editingModule) return;
     try {
-      const resSave = await fetch(`http://localhost:3000/api/lms/modules/${editingModule.id}`, {
+      const resSave = await fetch(`/api/lms/modules/${editingModule.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -111,7 +111,7 @@ export const LmsAdminView = () => {
       // Auto-save the module first (silent - no alert popup)
       await handleSave(true);
 
-      const assignRes = await fetch('http://localhost:3000/api/lms/assign', {
+      const assignRes = await fetch('/api/lms/assign', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ employeeIds: selectedEmployeeIds, moduleId: editingModule.id })
@@ -127,7 +127,7 @@ export const LmsAdminView = () => {
   const handleDeleteModule = async (id: string) => {
     if (!confirm('Dieses WBT wirklich löschen?')) return;
     try {
-      const res = await fetch(`http://localhost:3000/api/lms/modules/${id}`, {
+      const res = await fetch(`/api/lms/modules/${id}`, {
         method: 'DELETE'
       });
       if (!res.ok) throw new Error();
@@ -149,7 +149,7 @@ export const LmsAdminView = () => {
 
   const fetchNeeds = async () => {
     try {
-      const res = await fetch('http://localhost:3000/api/lms/needs');
+      const res = await fetch('/api/lms/needs');
       const data = await res.json();
       setNeeds(data);
     } catch (error) {
@@ -160,7 +160,7 @@ export const LmsAdminView = () => {
   const handleGroupNeeds = async () => {
     if (selectedNeedIds.length === 0) return alert('Bitte mindestens einen Bedarf auswählen.');
     try {
-      const res = await fetch('http://localhost:3000/api/lms/group-needs', {
+      const res = await fetch('/api/lms/group-needs', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ needIds: selectedNeedIds, title: groupTitle })
@@ -201,7 +201,7 @@ export const LmsAdminView = () => {
     setDraggedModId(null);
     try {
       const orderData = modules.map(m => ({ id: m.id, sortOrder: m.sortOrder }));
-      await fetch('http://localhost:3000/api/lms/modules/reorder', {
+      await fetch('/api/lms/modules/reorder', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ order: orderData })

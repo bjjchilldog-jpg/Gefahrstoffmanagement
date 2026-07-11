@@ -27,9 +27,9 @@ export const EmployeeView = () => {
   const loadData = async () => {
     try {
       const [empRes, subRes, tenantsRes] = await Promise.all([
-        fetch('http://localhost:3000/api/employees').then(r => r.json()),
-        fetch('http://localhost:3000/api/substances').then(r => r.json()),
-        fetch('http://localhost:3000/api/tenants').then(r => r.json()).catch(() => [])
+        fetch('/api/employees').then(r => r.json()),
+        fetch('/api/substances').then(r => r.json()),
+        fetch('/api/tenants').then(r => r.json()).catch(() => [])
       ]);
       setEmployees(empRes);
       // Extrahiere die HazardousSubstanceMaster Daten, falls es eine gemischte Liste ist
@@ -78,7 +78,7 @@ export const EmployeeView = () => {
 
   const handleCreateEmployee = async () => {
     try {
-      await fetch('http://localhost:3000/api/employees', {
+      await fetch('/api/employees', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -103,7 +103,7 @@ export const EmployeeView = () => {
   const handleAddExposure = async () => {
     if (!selectedEmployee || !newSubstanceId) return;
     try {
-      const res = await fetch(`http://localhost:3000/api/employees/${selectedEmployee.id}/exposures`, {
+      const res = await fetch(`/api/employees/${selectedEmployee.id}/exposures`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -119,7 +119,7 @@ export const EmployeeView = () => {
       setNewNotes('');
       
       // Update data immediately
-      const empRes = await fetch('http://localhost:3000/api/employees').then(r => r.json());
+      const empRes = await fetch('/api/employees').then(r => r.json());
       setEmployees(empRes);
       const updated = empRes.find((e: any) => e.id === selectedEmployee.id);
       if (updated) setSelectedEmployee(updated);
@@ -147,7 +147,7 @@ export const EmployeeView = () => {
       const currentTags = selectedEmployee.manualVorsorgen ? selectedEmployee.manualVorsorgen.split(',') : [];
       if (!currentTags.includes(tagToSave)) {
         currentTags.push(tagToSave);
-        await fetch(`http://localhost:3000/api/employees/${selectedEmployee.id}`, {
+        await fetch(`/api/employees/${selectedEmployee.id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ manualVorsorgen: currentTags.join(',') })
@@ -155,7 +155,7 @@ export const EmployeeView = () => {
         setNewManualTagReason('');
         setNewManualTagCustomReason('');
         
-        const empRes = await fetch('http://localhost:3000/api/employees').then(r => r.json());
+        const empRes = await fetch('/api/employees').then(r => r.json());
         setEmployees(empRes);
         const updated = empRes.find((e: any) => e.id === selectedEmployee.id);
         if (updated) setSelectedEmployee(updated);
@@ -171,13 +171,13 @@ export const EmployeeView = () => {
     try {
       const currentTags = selectedEmployee.manualVorsorgen ? selectedEmployee.manualVorsorgen.split(',') : [];
       const updatedTags = currentTags.filter((t: string) => t !== tagToRemove);
-      await fetch(`http://localhost:3000/api/employees/${selectedEmployee.id}`, {
+      await fetch(`/api/employees/${selectedEmployee.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ manualVorsorgen: updatedTags.join(',') })
       });
       
-      const empRes = await fetch('http://localhost:3000/api/employees').then(r => r.json());
+      const empRes = await fetch('/api/employees').then(r => r.json());
       setEmployees(empRes);
       const updated = empRes.find((e: any) => e.id === selectedEmployee.id);
       if (updated) setSelectedEmployee(updated);
@@ -189,10 +189,10 @@ export const EmployeeView = () => {
 
   const handleRemoveExposure = async (exposureId: string) => {
     try {
-      await fetch(`http://localhost:3000/api/employees/${selectedEmployee.id}/exposures/${exposureId}`, {
+      await fetch(`/api/employees/${selectedEmployee.id}/exposures/${exposureId}`, {
         method: 'DELETE'
       });
-      const empRes = await fetch('http://localhost:3000/api/employees').then(r => r.json());
+      const empRes = await fetch('/api/employees').then(r => r.json());
       setEmployees(empRes);
       const updated = empRes.find((e: any) => e.id === selectedEmployee.id);
       if (updated) setSelectedEmployee(updated);
@@ -346,7 +346,7 @@ export const EmployeeView = () => {
                     const sourceName = prompt("Mitarbeiter-Name oder ID, von dem kopiert werden soll (Für die Demo bitte exakte ID eingeben):");
                     if (sourceName) {
                       try {
-                        await fetch('http://localhost:3000/api/employees/clone', {
+                        await fetch('/api/employees/clone', {
                           method: 'POST',
                           headers: { 'Content-Type': 'application/json' },
                           body: JSON.stringify({

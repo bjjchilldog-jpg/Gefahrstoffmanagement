@@ -32,7 +32,7 @@ export const DocumentCenterView = () => {
   const fetchDocuments = async () => {
     setLoading(true);
     try {
-      const res = await fetch('http://localhost:3000/api/documents', {
+      const res = await fetch('/api/documents', {
         headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
       });
       const data = await res.json();
@@ -47,7 +47,7 @@ export const DocumentCenterView = () => {
 
   const fetchTenants = async () => {
     try {
-      const res = await fetch('http://localhost:3000/api/tenants', {
+      const res = await fetch('/api/tenants', {
         headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
       });
       const data = await res.json();
@@ -106,7 +106,7 @@ export const DocumentCenterView = () => {
 
   const handleDownload = async (id: string, filename: string) => {
     try {
-      const res = await fetch(`http://localhost:3000/api/documents/${id}/download`, {
+      const res = await fetch(`/api/documents/${id}/download`, {
         headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
       });
       if (!res.ok) throw new Error('Download fehlgeschlagen');
@@ -127,7 +127,7 @@ export const DocumentCenterView = () => {
 
   const handlePreview = async (id: string, filename: string, mimeType: string) => {
     try {
-      const res = await fetch(`http://localhost:3000/api/documents/${id}/download`, {
+      const res = await fetch(`/api/documents/${id}/download`, {
         headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
       });
       if (!res.ok) throw new Error('Vorschau fehlgeschlagen');
@@ -157,7 +157,7 @@ export const DocumentCenterView = () => {
     if (!newName || newName === currentName) return;
 
     try {
-      const res = await fetch(`http://localhost:3000/api/documents/${id}/rename`, {
+      const res = await fetch(`/api/documents/${id}/rename`, {
         method: 'PUT',
         headers: { 
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
@@ -175,7 +175,7 @@ export const DocumentCenterView = () => {
   const handleDelete = async (id: string) => {
     if (!confirm('Dokument wirklich löschen?')) return;
     try {
-      await fetch(`http://localhost:3000/api/documents/${id}`, { 
+      await fetch(`/api/documents/${id}`, { 
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
       });
@@ -207,7 +207,7 @@ export const DocumentCenterView = () => {
     }
 
     try {
-      const res = await fetch('http://localhost:3000/api/documents/upload', {
+      const res = await fetch('/api/documents/upload', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`

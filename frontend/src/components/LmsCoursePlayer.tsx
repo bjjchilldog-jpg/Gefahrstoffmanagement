@@ -88,21 +88,21 @@ export const LmsCoursePlayer = ({ moduleTitle, slides, onComplete, onCancel }: L
 
             {slide.type === 'IMAGE' && (
               <div className="flex flex-col items-center">
-                {slide.mediaUrl && <img src={`http://localhost:3000${slide.mediaUrl}`} alt="Slide" className="max-h-[60vh] object-contain mb-6 rounded-lg" />}
+                {slide.mediaUrl && <img src={`${slide.mediaUrl}`} alt="Slide" className="max-h-[60vh] object-contain mb-6 rounded-lg" />}
                 {slide.text && <p className="text-lg text-slate-700 text-center max-w-3xl">{slide.text}</p>}
               </div>
             )}
 
             {slide.type === 'VIDEO' && (
               <div className="flex flex-col items-center">
-                {slide.mediaUrl && <video src={`http://localhost:3000${slide.mediaUrl}`} controls controlsList="nodownload" className="max-h-[60vh] rounded-lg mb-6 shadow-lg bg-black" />}
+                {slide.mediaUrl && <video src={`${slide.mediaUrl}`} controls controlsList="nodownload" className="max-h-[60vh] rounded-lg mb-6 shadow-lg bg-black" />}
                 {slide.text && <p className="text-lg text-slate-700 text-center max-w-3xl">{slide.text}</p>}
               </div>
             )}
 
             {slide.type === 'PDF' && (
               <div className="flex flex-col h-[70vh]">
-                {slide.mediaUrl && <iframe src={`http://localhost:3000${slide.mediaUrl}${slide.pdfPage ? `#page=${slide.pdfPage}` : ''}`} className="w-full h-full border-0 rounded-lg shadow-sm" />}
+                {slide.mediaUrl && <iframe src={`${slide.mediaUrl}${slide.pdfPage ? `#page=${slide.pdfPage}` : ''}`} className="w-full h-full border-0 rounded-lg shadow-sm" />}
                 {slide.text && <p className="mt-4 text-slate-700 font-medium">{slide.text}</p>}
               </div>
             )}
@@ -113,7 +113,7 @@ export const LmsCoursePlayer = ({ moduleTitle, slides, onComplete, onCancel }: L
                 
                 <div className="relative inline-block cursor-crosshair rounded-xl overflow-hidden shadow-lg border border-slate-200" onClick={handleHotspotClick}>
                   {slide.mediaUrl ? (
-                    <img src={`http://localhost:3000${slide.mediaUrl}`} alt="Suchbild" className="max-h-[60vh] object-contain" />
+                    <img src={`${slide.mediaUrl}`} alt="Suchbild" className="max-h-[60vh] object-contain" />
                   ) : (
                     <div className="w-[800px] h-[500px] bg-slate-100 flex items-center justify-center text-slate-400">Kein Bild hochgeladen</div>
                   )}

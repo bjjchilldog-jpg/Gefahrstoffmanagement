@@ -63,7 +63,7 @@ export const LmsSlideEditor = ({ slides, onChange }: LmsSlideEditorProps) => {
     
     setIsUploading(true);
     try {
-      const res = await fetch('http://localhost:3000/api/upload', {
+      const res = await fetch('/api/upload', {
         method: 'POST',
         body: formData
       });
@@ -180,9 +180,9 @@ export const LmsSlideEditor = ({ slides, onChange }: LmsSlideEditorProps) => {
                       )}
                     </div>
                     <div className="p-4 flex justify-center">
-                      {activeType === 'IMAGE' && <img src={`http://localhost:3000${activeSlide.mediaUrl}`} alt="Preview" className="max-h-[600px] object-contain" />}
-                      {activeType === 'VIDEO' && <video src={`http://localhost:3000${activeSlide.mediaUrl}`} controls className="max-h-[600px]" />}
-                      {activeType === 'PDF' && <iframe src={`http://localhost:3000${activeSlide.mediaUrl}${activeSlide.pdfPage ? `#page=${activeSlide.pdfPage}` : ''}`} className="w-full h-[600px] border-0" />}
+                      {activeType === 'IMAGE' && <img src={`${activeSlide.mediaUrl}`} alt="Preview" className="max-h-[600px] object-contain" />}
+                      {activeType === 'VIDEO' && <video src={`${activeSlide.mediaUrl}`} controls className="max-h-[600px]" />}
+                      {activeType === 'PDF' && <iframe src={`${activeSlide.mediaUrl}${activeSlide.pdfPage ? `#page=${activeSlide.pdfPage}` : ''}`} className="w-full h-[600px] border-0" />}
                     </div>
                   </div>
                 )}

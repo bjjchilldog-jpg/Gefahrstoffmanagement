@@ -18,7 +18,7 @@ export const CopySubstanceModal = ({
 
   useEffect(() => {
     if (isOpen) {
-      fetch('http://localhost:3000/api/tenants')
+      fetch('/api/tenants')
         .then(res => res.json())
         .then(data => setTenants(data))
         .catch(err => console.error(err));

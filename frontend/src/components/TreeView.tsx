@@ -12,7 +12,7 @@ export const TreeView = ({ tenant }: any) => {
     e.stopPropagation();
     if (!confirm(`Soll die Firma '${tenant.name}' wirklich gelöscht werden?`)) return;
     try {
-      await fetch(`http://localhost:3000/api/tenants/${tenant.id}`, { method: 'DELETE' });
+      await fetch(`/api/tenants/${tenant.id}`, { method: 'DELETE' });
       window.location.reload();
     } catch (err) {
       alert('Fehler beim Löschen der Firma.');
@@ -35,13 +35,13 @@ export const TreeView = ({ tenant }: any) => {
     try {
       if (promptConfig.type === 'edit_tenant') {
         if (val === tenant.name) return;
-        await fetch(`http://localhost:3000/api/tenants/${tenant.id}`, { 
+        await fetch(`/api/tenants/${tenant.id}`, { 
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ name: val })
         });
       } else if (promptConfig.type === 'add_location') {
-        await fetch(`http://localhost:3000/api/tenants/${tenant.id}/locations`, {
+        await fetch(`/api/tenants/${tenant.id}/locations`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ name: val })
@@ -121,7 +121,7 @@ const LocationNode = ({ location }: any) => {
     if (!confirm(`Gesamten Standort '${location.name}' mit allen Abteilungen und Stoffen klonen?`)) return;
     setIsCloning(true);
     try {
-      await fetch(`http://localhost:3000/api/tenants/locations/${location.id}/clone`, {
+      await fetch(`/api/tenants/locations/${location.id}/clone`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
       });
@@ -147,7 +147,7 @@ const LocationNode = ({ location }: any) => {
     e.stopPropagation();
     if (!confirm(`Soll der Standort '${location.name}' wirklich gelöscht werden?`)) return;
     try {
-      await fetch(`http://localhost:3000/api/tenants/locations/${location.id}`, { method: 'DELETE' });
+      await fetch(`/api/tenants/locations/${location.id}`, { method: 'DELETE' });
       window.location.reload();
     } catch (err) {
       alert('Fehler beim Löschen des Standorts.');
@@ -164,7 +164,7 @@ const LocationNode = ({ location }: any) => {
     if (type === 'workArea') {
       const id = e.dataTransfer.getData('id');
       try {
-        await fetch(`http://localhost:3000/api/tenants/work-areas/${id}/move`, {
+        await fetch(`/api/tenants/work-areas/${id}/move`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ targetLocationId: location.id, targetParentId: null })
@@ -182,13 +182,13 @@ const LocationNode = ({ location }: any) => {
     try {
       if (promptConfig.type === 'edit_location') {
         if (val === location.name) return;
-        await fetch(`http://localhost:3000/api/tenants/locations/${location.id}`, { 
+        await fetch(`/api/tenants/locations/${location.id}`, { 
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ name: val })
         });
       } else if (promptConfig.type === 'add_workarea') {
-        await fetch(`http://localhost:3000/api/tenants/locations/${location.id}/work-areas`, {
+        await fetch(`/api/tenants/locations/${location.id}/work-areas`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ name: val })
@@ -299,7 +299,7 @@ const WorkAreaNode = ({ area, level = 0 }: { area: any, level?: number }) => {
     e.stopPropagation();
     if (!confirm(`Soll der Bereich '${area.name}' wirklich gelöscht werden?`)) return;
     try {
-      await fetch(`http://localhost:3000/api/tenants/work-areas/${area.id}`, { method: 'DELETE' });
+      await fetch(`/api/tenants/work-areas/${area.id}`, { method: 'DELETE' });
       window.location.reload();
     } catch (err) {
       alert('Fehler beim Löschen.');
@@ -311,7 +311,7 @@ const WorkAreaNode = ({ area, level = 0 }: { area: any, level?: number }) => {
     if (!confirm(`Soll der Bereich '${area.name}' mit allen Untergruppen und Stoffen geklont werden?`)) return;
     setIsCloning(true);
     try {
-      await fetch(`http://localhost:3000/api/tenants/work-areas/${area.id}/clone`, {
+      await fetch(`/api/tenants/work-areas/${area.id}/clone`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
       });
@@ -334,7 +334,7 @@ const WorkAreaNode = ({ area, level = 0 }: { area: any, level?: number }) => {
       const id = e.dataTransfer.getData('id');
       if (id === area.id) return; // Cannot drop onto itself
       try {
-        await fetch(`http://localhost:3000/api/tenants/work-areas/${id}/move`, {
+        await fetch(`/api/tenants/work-areas/${id}/move`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ targetLocationId: area.locationId, targetParentId: area.id })
@@ -359,13 +359,13 @@ const WorkAreaNode = ({ area, level = 0 }: { area: any, level?: number }) => {
     try {
       if (promptConfig.type === 'edit') {
         if (val === area.name) return;
-        await fetch(`http://localhost:3000/api/tenants/work-areas/${area.id}`, { 
+        await fetch(`/api/tenants/work-areas/${area.id}`, { 
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ name: val })
         });
       } else if (promptConfig.type === 'add_sub') {
-        await fetch(`http://localhost:3000/api/tenants/locations/${area.locationId}/work-areas`, {
+        await fetch(`/api/tenants/locations/${area.locationId}/work-areas`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ name: val, parentId: area.id })

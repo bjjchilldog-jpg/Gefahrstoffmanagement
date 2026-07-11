@@ -19,7 +19,7 @@ export const Login = () => {
     setLoading(true);
     
     try {
-      const res = await fetch('http://localhost:3000/api/auth/login', {
+      const res = await fetch('/api/auth/login', {
         method: 'POST',
         body: JSON.stringify({ email, password }),
         headers: { 'Content-Type': 'application/json' }
@@ -124,7 +124,7 @@ export const Login = () => {
           type="button"
           onClick={async () => {
             try {
-              const res = await fetch('http://localhost:3000/api/auth/sso/login');
+              const res = await fetch('/api/auth/sso/login');
               const data = await res.json();
               if (data.authUrl) {
                 window.location.href = data.authUrl;

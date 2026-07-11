@@ -18,9 +18,9 @@ export const Dashboard = () => {
       const token = localStorage.getItem('token') || '';
       const headers = { 'Authorization': `Bearer ${token}` };
       const [resTasks, resHistory, resEmp] = await Promise.all([
-        fetch('http://localhost:3000/api/regulations/revisions/pending', { headers }),
-        fetch('http://localhost:3000/api/regulations/revisions/history', { headers }),
-        fetch('http://localhost:3000/api/employees', { headers })
+        fetch('/api/regulations/revisions/pending', { headers }),
+        fetch('/api/regulations/revisions/history', { headers }),
+        fetch('/api/employees', { headers })
       ]);
       const dataTasks = await resTasks.json();
       const dataHistory = await resHistory.json();
@@ -38,7 +38,7 @@ export const Dashboard = () => {
   const confirmTask = async (id: string) => {
     try {
       const token = localStorage.getItem('token') || '';
-      await fetch(`http://localhost:3000/api/regulations/revisions/${id}/confirm`, {
+      await fetch(`/api/regulations/revisions/${id}/confirm`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ adminComment: adminComment[id] || 'Geprüft und freigegeben.' })

@@ -104,7 +104,7 @@ export const HotspotEditor = ({ imageUrl, zones, onChange }: HotspotEditorProps)
           onMouseUp={handleMouseUp}
           onMouseLeave={handleMouseUp}
         >
-          <img src={`http://localhost:3000${imageUrl}`} alt="Hotspot Base" className={`${isFullscreen ? 'max-h-[90vh]' : 'max-h-[600px]'} object-contain select-none pointer-events-none shadow-xl`} />
+          <img src={`${imageUrl}`} alt="Hotspot Base" className={`${isFullscreen ? 'max-h-[90vh]' : 'max-h-[600px]'} object-contain select-none pointer-events-none shadow-xl`} />
           
           {/* Render saved zones */}
           {zones.map(zone => (

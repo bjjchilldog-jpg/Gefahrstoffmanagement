@@ -87,7 +87,7 @@ function AppInner() {
   const handleAddTenant = async (name: string) => {
     if (!name) return;
     try {
-      const res = await fetch('http://localhost:3000/api/tenants', {
+      const res = await fetch('/api/tenants', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ name })
@@ -98,7 +98,7 @@ function AppInner() {
 
   useEffect(() => {
     if (token) {
-      fetch('http://localhost:3000/api/tenants', {
+      fetch('/api/tenants', {
         headers: { 'Authorization': `Bearer ${token}` }
       })
         .then(res => res.ok ? res.json() : [])
@@ -106,7 +106,7 @@ function AppInner() {
         .catch(() => {});
     }
 
-    fetch('http://localhost:3000/api/settings/default-tenant-id')
+    fetch('/api/settings/default-tenant-id')
       .then(res => res.json())
       .then(data => {
         if (data && !data.error) {

@@ -34,7 +34,7 @@ export const SubstanceList = ({ selectedIds, onSelectIds }: any) => {
 
   const fetchProfiles = async () => {
     try {
-      const res = await fetch('http://localhost:3000/api/profiles');
+      const res = await fetch('/api/profiles');
       const data = await res.json();
       setProfiles(data);
     } catch(e) { console.error(e); }
@@ -48,7 +48,7 @@ export const SubstanceList = ({ selectedIds, onSelectIds }: any) => {
     if (!selectedProfileId || !id) return;
     setIsApplyingProfile(true);
     try {
-      const res = await fetch(`http://localhost:3000/api/profiles/${selectedProfileId}/apply`, {
+      const res = await fetch(`/api/profiles/${selectedProfileId}/apply`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ workAreaId: id })
@@ -68,7 +68,7 @@ export const SubstanceList = ({ selectedIds, onSelectIds }: any) => {
     if (!id) return;
     setLoading(true);
     try {
-      const res = await fetch(`http://localhost:3000/api/substances?workAreaId=${id}`, {
+      const res = await fetch(`/api/substances?workAreaId=${id}`, {
         headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
       });
       const data = await res.json();
@@ -158,7 +158,7 @@ export const SubstanceList = ({ selectedIds, onSelectIds }: any) => {
     if (!sifa && !betriebsarzt) return;
     
     await Promise.all(selectedIds.map((sid: string) => 
-      fetch(`http://localhost:3000/api/substances/${sid}`, {
+      fetch(`/api/substances/${sid}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token') }` },
         body: JSON.stringify({ 
@@ -174,7 +174,7 @@ export const SubstanceList = ({ selectedIds, onSelectIds }: any) => {
 
   const handleCopySubstanceConfirm = async (targetWorkAreaId: string) => {
     try {
-      const res = await fetch(`http://localhost:3000/api/substances/copy`, {
+      const res = await fetch(`/api/substances/copy`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
@@ -203,7 +203,7 @@ export const SubstanceList = ({ selectedIds, onSelectIds }: any) => {
   const handleDelete = async (deleteId: string) => {
     if (!confirm("Diesen Eintrag wirklich löschen?")) return;
     try {
-      const res = await fetch(`http://localhost:3000/api/substances/${deleteId}`, {
+      const res = await fetch(`/api/substances/${deleteId}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${localStorage.getItem('token') }` }
       });
@@ -227,10 +227,10 @@ export const SubstanceList = ({ selectedIds, onSelectIds }: any) => {
           </button>
           <button onClick={async () => {
             const a = document.createElement('a');
-            a.href = `http://localhost:3000/api/backup/excel`;
+            a.href = `/api/backup/excel`;
             a.setAttribute('download', '');
             const token = localStorage.getItem('token');
-            const res = await fetch('http://localhost:3000/api/backup/excel', { headers: { 'Authorization': `Bearer ${token}` } });
+            const res = await fetch('/api/backup/excel', { headers: { 'Authorization': `Bearer ${token}` } });
             const blob = await res.blob();
             a.href = URL.createObjectURL(blob);
             a.download = `Gefahrstoffverzeichnis_${new Date().toISOString().split('T')[0]}.xlsx`;
@@ -240,7 +240,7 @@ export const SubstanceList = ({ selectedIds, onSelectIds }: any) => {
           </button>
           <button onClick={async () => {
             const token = localStorage.getItem('token');
-            const res = await fetch(`http://localhost:3000/api/backup/bundle`, { headers: { 'Authorization': `Bearer ${token}` } });
+            const res = await fetch(`/api/backup/bundle`, { headers: { 'Authorization': `Bearer ${token}` } });
             const blob = await res.blob();
             const a = document.createElement('a');
             a.href = URL.createObjectURL(blob);
@@ -258,7 +258,7 @@ export const SubstanceList = ({ selectedIds, onSelectIds }: any) => {
           <button onClick={async () => {
             if (!confirm("Wollen Sie wirklich ALLE Stoffe in diesem Bereich löschen?")) return;
             try {
-              const res = await fetch(`http://localhost:3000/api/substances?workAreaId=${id}`, {
+              const res = await fetch(`/api/substances?workAreaId=${id}`, {
                 method: 'DELETE',
                 headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
               });
@@ -558,7 +558,7 @@ export const SubstanceList = ({ selectedIds, onSelectIds }: any) => {
                             <button onClick={async (e) => {
                               e.stopPropagation();
                               if (!confirm("Ich bestätige die juristische Richtigkeit dieser Zuweisung. Dies wird rechtskräftig protokolliert.")) return;
-                              await fetch(`http://localhost:3000/api/substances/${item.id}/approve`, {
+                              await fetch(`/api/substances/${item.id}/approve`, {
                                 method: 'POST',
                                 headers: { 'Authorization': `Bearer ${localStorage.getItem('token') }` }
                               });
@@ -578,7 +578,7 @@ export const SubstanceList = ({ selectedIds, onSelectIds }: any) => {
                             e.stopPropagation();
                             if (!confirm(`Stoff "${ms.productName}" duplizieren?`)) return;
                             try {
-                              const res = await fetch(`http://localhost:3000/api/backup/substances/${item.masterSubstanceId}/clone`, {
+                              const res = await fetch(`/api/backup/substances/${item.masterSubstanceId}/clone`, {
                                 method: 'POST', headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
                               });
                               if (res.ok) { fetchSubstances(); alert('Stoff dupliziert!'); }
@@ -908,7 +908,7 @@ export const SubstanceList = ({ selectedIds, onSelectIds }: any) => {
                       batchFiles.forEach(f => formData.append('files', f));
                       formData.append('workAreaId', id || '');
                       const token = localStorage.getItem('token');
-                      const res = await fetch('http://localhost:3000/api/sdb/batch-parse', {
+                      const res = await fetch('/api/sdb/batch-parse', {
                         method: 'POST',
                         headers: { 'Authorization': `Bearer ${token}` },
                         body: formData,
@@ -917,7 +917,7 @@ export const SubstanceList = ({ selectedIds, onSelectIds }: any) => {
                       if (data.error) throw new Error(data.error);
                       setBatchResults(data.results || []);
                       // Liste neu laden
-                      const fetchRes = await fetch(`http://localhost:3000/api/substances?workAreaId=${id}`, {
+                      const fetchRes = await fetch(`/api/substances?workAreaId=${id}`, {
                         headers: { 'Authorization': `Bearer ${token}` },
                       });
                       const reloadData = await fetchRes.json();

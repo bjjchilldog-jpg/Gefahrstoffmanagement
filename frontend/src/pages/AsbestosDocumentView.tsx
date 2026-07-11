@@ -10,7 +10,7 @@ export const AsbestosDocumentView = () => {
   const [activity, setActivity] = React.useState('Kleinsttätigkeit'); // Placeholder for now
 
   React.useEffect(() => {
-    fetch('http://localhost:3000/api/tenants')
+    fetch('/api/tenants')
       .then(res => res.json())
       .then(tenants => {
         for (const t of tenants) {

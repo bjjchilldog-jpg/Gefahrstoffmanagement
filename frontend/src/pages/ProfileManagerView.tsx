@@ -19,7 +19,7 @@ export const ProfileManagerView = () => {
   
   const fetchProfiles = async () => {
     try {
-      const res = await fetch('http://localhost:3000/api/profiles');
+      const res = await fetch('/api/profiles');
       const data = await res.json();
       setProfiles(data);
       if (selectedProfile) {
@@ -32,7 +32,7 @@ export const ProfileManagerView = () => {
 
   const fetchMasterSubstances = async () => {
     try {
-      const res = await fetch('http://localhost:3000/api/substances', {
+      const res = await fetch('/api/substances', {
         headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
       });
       const data = await res.json();
@@ -50,7 +50,7 @@ export const ProfileManagerView = () => {
   const handleCreateProfile = async () => {
     if (!newProfileName.trim()) return;
     try {
-      const res = await fetch('http://localhost:3000/api/profiles', {
+      const res = await fetch('/api/profiles', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: newProfileName })
@@ -70,7 +70,7 @@ export const ProfileManagerView = () => {
   const handleDeleteProfile = async (id: string) => {
     if (!confirm('Profil wirklich löschen?')) return;
     try {
-      await fetch(`http://localhost:3000/api/profiles/${id}`, { method: 'DELETE' });
+      await fetch(`/api/profiles/${id}`, { method: 'DELETE' });
       if (selectedProfile?.id === id) setSelectedProfile(null);
       fetchProfiles();
     } catch (e) {
@@ -81,7 +81,7 @@ export const ProfileManagerView = () => {
   const handleAddSubstance = async () => {
     if (!selectedProfile || !addingSubstanceId) return;
     try {
-      await fetch(`http://localhost:3000/api/profiles/${selectedProfile.id}/items`, {
+      await fetch(`/api/profiles/${selectedProfile.id}/items`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ isBiological: false, masterSubstanceId: addingSubstanceId })
@@ -95,7 +95,7 @@ export const ProfileManagerView = () => {
 
   const handleRemoveItem = async (itemId: string) => {
     try {
-      await fetch(`http://localhost:3000/api/profiles/items/${itemId}`, { method: 'DELETE' });
+      await fetch(`/api/profiles/items/${itemId}`, { method: 'DELETE' });
       fetchProfiles();
     } catch (e) {
       console.error(e);
@@ -104,7 +104,7 @@ export const ProfileManagerView = () => {
 
   const handleExportProfile = async (id: string, name: string) => {
     try {
-      const res = await fetch(`http://localhost:3000/api/profiles/${id}/export`);
+      const res = await fetch(`/api/profiles/${id}/export`);
       const data = await res.json();
       
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -130,7 +130,7 @@ export const ProfileManagerView = () => {
       const text = await file.text();
       const profileData = JSON.parse(text);
 
-      const res = await fetch('http://localhost:3000/api/profiles/import', {
+      const res = await fetch('/api/profiles/import', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(profileData)
@@ -159,7 +159,7 @@ export const ProfileManagerView = () => {
 
   const handleCreateMissingSubstance = async () => {
     try {
-      const res = await fetch('http://localhost:3000/api/substances/master', {
+      const res = await fetch('/api/substances/master', {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
@@ -175,7 +175,7 @@ export const ProfileManagerView = () => {
         setCurrentFormData(missingSubstances[nextIndex]);
       } else {
         setShowImportModal(false);
-        const retryRes = await fetch('http://localhost:3000/api/profiles/import', {
+        const retryRes = await fetch('/api/profiles/import', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(pendingImportData)
