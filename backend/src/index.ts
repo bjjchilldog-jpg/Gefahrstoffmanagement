@@ -89,21 +89,12 @@ app.get('/health', (req, res) => {
 });
 
 // Freundliche Status-Seite für Port 3000
-app.get('/', (req, res) => {
-  res.send(`
-    <html>
-      <body style="font-family: system-ui, sans-serif; background: #f8fafc; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0;">
-        <div style="background: white; padding: 2rem 3rem; border-radius: 12px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); text-align: center;">
-          <h1 style="color: #0f172a; margin-top: 0;">Gefahrstoff-Management API</h1>
-          <p style="color: #64748b; font-size: 1.1rem;">Der Backend-Server ist aktiv und läuft fehlerfrei.</p>
-          <div style="margin-top: 2rem; padding: 1rem; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px;">
-            <p style="color: #1e3a8a; margin: 0; font-weight: 500;">Bitte öffnen Sie die Benutzeroberfläche unter:</p>
-            <a href="http://localhost:5173" style="display: block; margin-top: 0.5rem; color: #2563eb; font-weight: bold; font-size: 1.25rem;">http://localhost:5173</a>
-          </div>
-        </div>
-      </body>
-    </html>
-  `);
+// Serve Frontend statically in production
+const frontendPath = path.join(__dirname, '../../frontend/dist');
+app.use(express.static(frontendPath));
+
+app.get('*', (req, res) => {
+  res.sendFile(path.join(frontendPath, 'index.html'));
 });
 
 import { startCronJobs } from './services/cron.service';
