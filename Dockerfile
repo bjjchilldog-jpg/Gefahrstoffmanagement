@@ -1,4 +1,4 @@
-FROM node:18-alpine
+FROM node:22-alpine
 
 WORKDIR /app
 
@@ -6,7 +6,7 @@ WORKDIR /app
 COPY frontend/package*.json ./frontend/
 RUN cd frontend && npm install
 COPY frontend ./frontend
-RUN cd frontend && npx vite build
+RUN cd frontend && npm run build
 
 # 2. BACKEND BILDEN
 COPY backend/package*.json ./backend/
