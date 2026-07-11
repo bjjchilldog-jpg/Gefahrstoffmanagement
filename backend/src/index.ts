@@ -88,6 +88,9 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', version: '1.0.0' });
 });
 
+// Trust proxy für Railway Rate Limiting
+app.set('trust proxy', 1);
+
 // Freundliche Status-Seite für Port 3000
 // Serve Frontend statically in production
 const frontendPath = path.join(__dirname, '../../frontend/dist');

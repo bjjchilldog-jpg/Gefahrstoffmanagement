@@ -24,12 +24,16 @@ router.post('/login', loginLimiter, async (req: Request, res: Response) => {
   try {
     const user = await prisma.user.findUnique({ where: { email: email.toLowerCase().trim() } });
 
+    console.log(`[LOGIN ATTEMPT] Email: ${email}, Found user: ${!!user}`);
+
     // Anti-Enumeration: Einheitliche Fehlermeldung
     if (!user) {
       return res.status(401).json({ error: 'E-Mail oder Passwort falsch.' });
     }
 
     const isValidPassword = await bcrypt.compare(password, user.passwordHash);
+    console.log(`[LOGIN ATTEMPT] isValidPassword: ${isValidPassword}`);
+
     if (!isValidPassword) {
       await auditLogService.log('LOGIN_FAILED', `Fehlgeschlagener Login-Versuch für ${email}`, 'SYSTEM', req.ip || '127.0.0.1');
       return res.status(401).json({ error: 'E-Mail oder Passwort falsch.' });
