@@ -2,6 +2,9 @@ FROM node:22-alpine
 
 WORKDIR /app
 
+# Installiere OpenSSL für Prisma
+RUN apk add --no-cache openssl
+
 # 1. FRONTEND BILDEN
 COPY frontend/package*.json ./frontend/
 RUN cd frontend && npm install
