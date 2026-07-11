@@ -76,3 +76,49 @@ export const assignMatrix = async (req: AuthRequest, res: Response) => {
     res.status(500).json({ error: 'Fehler bei der Zuweisung' });
   }
 };
+
+/**
+ * Umgekehrte Suche: In welchen Häusern/Arbeitsbereichen ist ein bestimmter Stoff im Einsatz?
+ * GET /api/matrix/reverse?substanceId=xxx
+ */
+export const reverseSearch = async (req: Request, res: Response) => {
+  try {
+    const { substanceId } = req.query;
+    if (!substanceId) return res.status(400).json({ error: 'substanceId ist erforderlich' });
+
+    const inventories = await prisma.localSubstanceInventory.findMany({
+      where: { masterSubstanceId: String(substanceId) },
+      include: {
+        masterSubstance: { select: { productName: true } },
+        workArea: {
+          include: {
+            location: {
+              include: { tenant: { select: { name: true } } }
+            }
+          }
+        }
+      }
+    });
+
+    const results = inventories.map(inv => ({
+      inventoryId: inv.id,
+      tenantName: inv.workArea?.location?.tenant?.name || '-',
+      locationName: inv.workArea?.location?.name || '-',
+      locationId: inv.workArea?.location?.id,
+      workAreaName: inv.workArea?.name || '-',
+      workAreaId: inv.workAreaId,
+      status: inv.status,
+      annualAmount: inv.annualAmount,
+    }));
+
+    res.json({
+      substanceId,
+      substanceName: inventories[0]?.masterSubstance?.productName || '-',
+      totalAssignments: results.length,
+      assignments: results
+    });
+  } catch (error) {
+    console.error('Reverse Search Error:', error);
+    res.status(500).json({ error: 'Fehler bei der umgekehrten Suche' });
+  }
+};

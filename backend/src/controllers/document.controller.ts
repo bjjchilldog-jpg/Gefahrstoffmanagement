@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import { AuthRequest } from '../middleware/auth.middleware';
 import prisma from '../lib/prisma';
 import fs from 'fs';
 import path from 'path';
@@ -9,7 +10,7 @@ if (ffmpegStatic) {
   ffmpeg.setFfmpegPath(ffmpegStatic);
 }
 
-export const uploadDocument = async (req: Request, res: Response) => {
+export const uploadDocument = async (req: any, res: Response) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'No file uploaded' });
@@ -17,6 +18,19 @@ export const uploadDocument = async (req: Request, res: Response) => {
 
     const { originalname, filename, path: filePath, mimetype } = req.file;
     const { docType, tenantId, locationId, workAreaId } = req.body;
+    
+    // Security Check: LOCATION_MANAGER darf nur in eigenen Standorten hochladen
+    const userRole = req.user?.role;
+    const userId = req.user?.userId;
+    if (userRole === 'LOCATION_MANAGER' && locationId && userId) {
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        include: { locations: true }
+      });
+      if (!user || !user.locations.some(l => l.id === locationId)) {
+        return res.status(403).json({ error: 'Keine Berechtigung für diesen Standort.' });
+      }
+    }
 
     let finalPath = filePath;
     let finalFilename = filename;
@@ -59,16 +73,31 @@ export const uploadDocument = async (req: Request, res: Response) => {
   }
 };
 
-export const getDocuments = async (req: Request, res: Response) => {
+export const getDocuments = async (req: AuthRequest, res: Response) => {
   try {
     const { tenantId, locationId, workAreaId } = req.query;
-    
-    const documents = await prisma.document.findMany({
-      where: {
-        tenantId: tenantId as string || undefined,
-        locationId: locationId as string || undefined,
-        workAreaId: workAreaId as string || undefined,
+    const userRole = req.user?.role;
+    const userId = req.user?.userId;
+
+    let whereClause: any = {};
+    if (tenantId) whereClause.tenantId = tenantId;
+    if (locationId) whereClause.locationId = locationId;
+    if (workAreaId) whereClause.workAreaId = workAreaId;
+
+    if (userRole === 'LOCATION_MANAGER' && userId) {
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        include: { locations: true }
+      });
+      if (user && user.locations.length > 0) {
+        whereClause.locationId = { in: user.locations.map(l => l.id) };
+      } else {
+        whereClause.locationId = 'no-locations';
       }
+    }
+
+    const documents = await prisma.document.findMany({
+      where: whereClause
     });
     
     res.json(documents);
@@ -108,5 +137,44 @@ export const renameDocument = async (req: Request, res: Response) => {
     res.json(updatedDocument);
   } catch (error) {
     res.status(500).json({ error: 'Failed to rename document' });
+  }
+};
+export const downloadDocument = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const document = await prisma.document.findUnique({ where: { id } });
+    if (!document) {
+      return res.status(404).json({ error: 'Document not found' });
+    }
+    if (!fs.existsSync(document.path)) {
+      return res.status(404).json({ error: 'File not found on disk' });
+    }
+    res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(document.originalName)}"`);
+    res.setHeader('Content-Type', document.mimeType || 'application/octet-stream');
+    const fileStream = fs.createReadStream(document.path);
+    fileStream.pipe(res);
+  } catch (error) {
+    console.error('Download error:', error);
+    res.status(500).json({ error: 'Failed to download document' });
+  }
+};
+
+export const deleteDocument = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    
+    const document = await prisma.document.findUnique({ where: { id } });
+    if (!document) {
+      return res.status(404).json({ error: 'Document not found' });
+    }
+
+    if (fs.existsSync(document.path)) {
+      fs.unlinkSync(document.path);
+    }
+
+    await prisma.document.delete({ where: { id } });
+    res.json({ message: 'Document deleted' });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to delete document' });
   }
 };

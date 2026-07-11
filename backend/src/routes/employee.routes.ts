@@ -1,10 +1,11 @@
 import { Router } from 'express';
-import { getEmployees, createEmployee, deleteEmployee, addExposure, removeExposure, cloneExposures } from '../controllers/employee.controller';
+import { getEmployees, createEmployee, updateEmployee, deleteEmployee, addExposure, removeExposure, cloneExposures } from '../controllers/employee.controller';
 
 const router = Router();
 
 router.get('/', getEmployees);
 router.post('/', createEmployee);
+router.put('/:id', updateEmployee);
 router.delete('/:id', deleteEmployee);
 
 router.post('/:id/exposures', addExposure);

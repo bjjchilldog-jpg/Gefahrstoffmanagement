@@ -7,11 +7,11 @@ export class RegulationService {
    * Setzt die Warn-Flags am Stoff und erstellt ggf. PENDING RevisionTasks.
    */
   async checkSubstanceAgainstRegulations(substanceId: string) {
-    const substance = await prisma.hazardousSubstance.findUnique({
+    const substance = await prisma.hazardousSubstanceMaster.findUnique({
       where: { id: substanceId }
     });
     
-    if (!substance) return;
+    if (!substance || !substance.hPhrases) return;
 
     const subPhrases = substance.hPhrases.split(',').map(p => p.trim());
 
@@ -36,7 +36,7 @@ export class RegulationService {
         const existingTask = await prisma.revisionTask.findFirst({
           where: {
             regulationId: reg.id,
-            hazardousSubstanceId: substance.id,
+            hazardousSubstanceId: substance.id, // Dies verweist in RevisionTask nun eigentlich auf den Master, wir müssen in der DB gucken
             status: 'PENDING'
           }
         });
@@ -61,7 +61,7 @@ export class RegulationService {
     }
 
     // Flags am Stoff updaten
-    await prisma.hazardousSubstance.update({
+    await prisma.hazardousSubstanceMaster.update({
       where: { id: substance.id },
       data: {
         isMutterschutzRelevant,
@@ -86,10 +86,10 @@ export class RegulationService {
     if (!location) return;
 
     if (location.constructionYear && location.constructionYear < 1993) {
-      if (location.asbestosStatus !== 'Asbest: Nicht sicher (Generalvermutung)') {
+      if (location.asbestosStatus !== 'SUSPECTED') {
         await prisma.location.update({
           where: { id: locationId },
-          data: { asbestosStatus: 'Asbest: Nicht sicher (Generalvermutung)' }
+          data: { asbestosStatus: 'SUSPECTED' }
         });
         
         await auditLogService.log('ASBESTOS_STATUS_UPDATE', `Generalvermutung für Gebäude ${location.name} (Baujahr ${location.constructionYear}) aktiviert.`);
@@ -100,15 +100,25 @@ export class RegulationService {
         });
 
         if (trgs519Reg) {
-          await prisma.revisionTask.create({
-            data: {
+          const existingTask = await prisma.revisionTask.findFirst({
+            where: {
               regulationId: trgs519Reg.id,
               locationId: location.id,
-              status: 'PENDING',
-              adminComment: `Asbest-Generalvermutung (Baujahr < 1993). TRGS 519 Workflow zwingend erforderlich.`
+              status: 'PENDING'
             }
           });
-          await auditLogService.log('REVISION_TASK_CREATED', `TRGS 519 Asbest-Task für Location ${location.name} generiert.`);
+
+          if (!existingTask) {
+            await prisma.revisionTask.create({
+              data: {
+                regulationId: trgs519Reg.id,
+                locationId: location.id,
+                status: 'PENDING',
+                adminComment: `Asbest-Generalvermutung (Baujahr < 1993). TRGS 519 Workflow zwingend erforderlich.`
+              }
+            });
+            await auditLogService.log('REVISION_TASK_CREATED', `TRGS 519 Asbest-Task für Location ${location.name} generiert.`);
+          }
         }
       }
     }

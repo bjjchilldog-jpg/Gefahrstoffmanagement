@@ -1,0 +1,1 @@
+import { PrismaClient } from '@prisma/client'; const prisma = new PrismaClient(); async function main() { const findings = await prisma.asbestosFinding.findMany({ include: { exposedEmployees: true } }); console.log(JSON.stringify(findings, null, 2)); } main().catch(console.error).finally(() => prisma.$disconnect());

@@ -91,7 +91,7 @@ export const FireDepartmentView = () => {
           </div>
         </div>
 
-        {Object.entries(grouped).map(([areaName, items]) => (
+        {Object.entries(grouped).map(([areaName, items]: [string, any]) => (
           <div key={areaName} className="mb-12 break-inside-avoid">
             <h2 className="text-xl font-bold bg-slate-100 p-3 border-l-4 border-slate-800 mb-4">
               {areaName}
@@ -106,7 +106,7 @@ export const FireDepartmentView = () => {
                 </tr>
               </thead>
               <tbody>
-                {items.map(item => {
+                {items.map((item: any) => {
                   const ms = item.masterSubstance;
                   return (
                     <tr key={item.id}>

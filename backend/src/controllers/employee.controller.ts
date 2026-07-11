@@ -9,6 +9,12 @@ export const getEmployees = async (req: Request, res: Response) => {
       include: {
         exposures: {
           include: { masterSubstance: true }
+        },
+        trainingRecords: {
+          include: { trainingModule: true }
+        },
+        asbestosFindings: {
+          include: { location: true }
         }
       },
       orderBy: { lastName: 'asc' }
@@ -32,6 +38,23 @@ export const createEmployee = async (req: Request, res: Response) => {
       }
     });
     res.status(201).json(employee);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const updateEmployee = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { manualVorsorgen } = req.body;
+    
+    const employee = await prisma.employee.update({
+      where: { id },
+      data: {
+        manualVorsorgen: manualVorsorgen !== undefined ? manualVorsorgen : undefined
+      }
+    });
+    res.json(employee);
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }

@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gefahrstoff WBT — Offline</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Segoe UI', system-ui, sans-serif; background: #0f172a; color: white; min-height: 100vh; display: flex; flex-direction: column; }
+    
+    .header { padding: 20px 32px; background: linear-gradient(135deg, #1e293b 0%, #334155 100%); display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.1); }
+    .header h1 { font-size: 20px; font-weight: 700; }
+    .header h1 span { color: #fbbf24; }
+    .status-badge { padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+    .status-badge.offline { background: rgba(239,68,68,0.2); color: #fca5a5; border: 1px solid rgba(239,68,68,0.3); }
+    .status-badge.online { background: rgba(34,197,94,0.2); color: #86efac; border: 1px solid rgba(34,197,94,0.3); }
+    
+    .main { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px; gap: 24px; }
+    
+    .offline-icon { font-size: 80px; margin-bottom: 16px; animation: pulse 2s infinite; }
+    @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+    
+    .offline-message { text-align: center; max-width: 500px; }
+    .offline-message h2 { font-size: 24px; font-weight: 700; margin-bottom: 8px; }
+    .offline-message p { color: #94a3b8; font-size: 15px; line-height: 1.6; }
+    
+    .card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; width: 100%; max-width: 800px; margin-top: 24px; }
+    .card { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 24px; cursor: pointer; transition: all 0.2s; text-align: center; }
+    .card:hover { background: rgba(255,255,255,0.1); transform: translateY(-2px); border-color: #fbbf24; }
+    .card .icon { font-size: 36px; margin-bottom: 12px; }
+    .card h3 { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
+    .card p { font-size: 12px; color: #64748b; }
+    
+    .btn { padding: 12px 24px; border: none; border-radius: 8px; font-weight: 600; font-size: 14px; cursor: pointer; transition: all 0.15s; }
+    .btn-primary { background: #fbbf24; color: #0f172a; }
+    .btn-primary:hover { background: #f59e0b; }
+    .btn-secondary { background: rgba(255,255,255,0.1); color: white; border: 1px solid rgba(255,255,255,0.2); }
+    .btn-secondary:hover { background: rgba(255,255,255,0.15); }
+    
+    .sync-bar { padding: 16px 32px; background: #1e293b; border-top: 1px solid rgba(255,255,255,0.1); display: flex; justify-content: space-between; align-items: center; }
+    .sync-info { font-size: 12px; color: #64748b; }
+    
+    #moduleList { width: 100%; max-width: 800px; }
+    .module-item { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 16px 20px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
+    .module-item .title { font-weight: 600; font-size: 14px; }
+    .module-item .meta { font-size: 11px; color: #64748b; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>⚗️ Gefahrstoff <span>WBT</span> — Desktop</h1>
+    <span class="status-badge offline" id="statusBadge">⦿ Offline</span>
+  </div>
+
+  <div class="main" id="mainContent">
+    <div class="offline-icon">🖥️</div>
+    <div class="offline-message">
+      <h2>Willkommen im Offline-WBT</h2>
+      <p>
+        Führen Sie Schulungen und Unterweisungen auch ohne Internetverbindung durch. 
+        Alle Ergebnisse werden kryptographisch signiert und lokal gespeichert.
+      </p>
+    </div>
+
+    <div class="card-grid">
+      <div class="card" onclick="loadModules()">
+        <div class="icon">📚</div>
+        <h3>Gespeicherte Module</h3>
+        <p>Offline verfügbare Schulungen anzeigen</p>
+      </div>
+      <div class="card" onclick="showPendingResults()">
+        <div class="icon">📋</div>
+        <h3>Ausstehende Ergebnisse</h3>
+        <p>Noch nicht synchronisierte Teilnahmen</p>
+      </div>
+      <div class="card" onclick="exportBundle()">
+        <div class="icon">💾</div>
+        <h3>Ergebnisse exportieren</h3>
+        <p>Signierte JSON-Datei speichern</p>
+      </div>
+      <div class="card" onclick="attemptSync()">
+        <div class="icon">🔄</div>
+        <h3>Mit Server synchronisieren</h3>
+        <p>Ergebnisse hochladen (Online erforderlich)</p>
+      </div>
+    </div>
+
+    <div id="moduleList"></div>
+  </div>
+
+  <div class="sync-bar">
+    <span class="sync-info" id="syncInfo">Letzte Synchronisation: Noch nie</span>
+    <button class="btn btn-secondary" onclick="checkConnection()">Verbindung prüfen</button>
+  </div>
+
+  <script>
+    // Bridge-Zugriff über preload.js
+    const bridge = window.wbtBridge;
+
+    // Online/Offline Status
+    function updateStatus() {
+      const badge = document.getElementById('statusBadge');
+      if (navigator.onLine) {
+        badge.className = 'status-badge online';
+        badge.textContent = '⦿ Online';
+      } else {
+        badge.className = 'status-badge offline';
+        badge.textContent = '⦿ Offline';
+      }
+    }
+    window.addEventListener('online', updateStatus);
+    window.addEventListener('offline', updateStatus);
+    updateStatus();
+
+    async function loadModules() {
+      if (!bridge) { alert('Nur in der Desktop-App verfügbar.'); return; }
+      const modules = await bridge.getModules();
+      const list = document.getElementById('moduleList');
+      
+      if (modules.length === 0) {
+        list.innerHTML = '<div style="text-align:center;color:#64748b;padding:24px;">Keine Module lokal gespeichert. Synchronisieren Sie zuerst mit dem Server.</div>';
+        return;
+      }
+
+      list.innerHTML = modules.map(m => `
+        <div class="module-item">
+          <div>
+            <div class="title">📖 ${m.title}</div>
+            <div class="meta">Heruntergeladen: ${m.synced_at || 'Unbekannt'}</div>
+          </div>
+          <button class="btn btn-primary" onclick="startModule('${m.id}')">Starten</button>
+        </div>
+      `).join('');
+    }
+
+    async function showPendingResults() {
+      if (!bridge) return;
+      const results = await bridge.getPendingResults();
+      const list = document.getElementById('moduleList');
+
+      if (results.length === 0) {
+        list.innerHTML = '<div style="text-align:center;color:#22c55e;padding:24px;">✅ Alle Ergebnisse sind synchronisiert!</div>';
+        return;
+      }
+
+      list.innerHTML = `<h3 style="margin-bottom:12px;font-size:16px;">${results.length} ausstehende Ergebnis(se)</h3>` +
+        results.map(r => `
+          <div class="module-item">
+            <div>
+              <div class="title">Modul: ${r.module_id.substring(0, 8)}... | Mitarbeiter: ${r.employee_id.substring(0, 8)}...</div>
+              <div class="meta">${r.passed ? '✅ Bestanden' : '❌ Nicht bestanden'} | Score: ${r.score}% | ${r.completed_at}</div>
+            </div>
+            <span style="font-size:11px;color:#fbbf24;">🔒 Signiert</span>
+          </div>
+        `).join('');
+    }
+
+    async function exportBundle() {
+      if (!bridge) return;
+      const result = await bridge.exportBundle();
+      if (result.success) {
+        alert(`${result.count} Ergebnis(se) exportiert nach:\n${result.path}`);
+      } else if (result.error) {
+        alert(result.error);
+      }
+    }
+
+    async function attemptSync() {
+      if (!navigator.onLine) {
+        alert('Keine Internetverbindung. Bitte versuchen Sie es später erneut.');
+        return;
+      }
+      if (!bridge) return;
+      
+      const token = prompt('Bitte geben Sie Ihren API-Token ein (aus dem Web-Dashboard):');
+      if (!token) return;
+      
+      const result = await bridge.syncResults('http://localhost:3000', token);
+      document.getElementById('syncInfo').textContent = `Letzte Sync: ${new Date().toLocaleString()} — ${result.synced} synchronisiert, ${result.failed} fehlgeschlagen`;
+      alert(`Synchronisation abgeschlossen: ${result.synced}/${result.total} erfolgreich.`);
+    }
+
+    async function checkConnection() {
+      try {
+        const res = await fetch('http://localhost:3000/health');
+        const data = await res.json();
+        alert(data.status === 'ok' ? '✅ Server erreichbar!' : '⚠️ Server antwortet, aber Status: ' + data.status);
+      } catch {
+        alert('❌ Server nicht erreichbar. Offline-Modus aktiv.');
+      }
+    }
+
+    function startModule(moduleId) {
+      alert('Modul ' + moduleId + ' wird gestartet...\n\n(In der vollständigen Version öffnet sich hier der interaktive Foliensatz mit Quiz.)');
+    }
+  </script>
+</body>
+</html>

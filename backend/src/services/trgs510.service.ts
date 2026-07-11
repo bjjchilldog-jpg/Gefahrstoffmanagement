@@ -30,7 +30,7 @@ const COMPATIBILITY_MATRIX: Record<string, Record<string, boolean>> = {
   // (z.B. LGK 3 Entzündbar vs. LGK 8 Ätzend).
 };
 
-export const checkTRGS510Compatibility = async (workAreaId: string, newStorageClass: string, newChemicalType?: string): Promise<{ isCompatible: boolean, conflicts: string[] }> => {
+export const checkTRGS510Compatibility = async (workAreaId: string, newStorageClass: string): Promise<{ isCompatible: boolean, conflicts: string[] }> => {
   const conflicts: string[] = [];
   
   // Hole alle Stoffe im selben Raum
@@ -49,37 +49,6 @@ export const checkTRGS510Compatibility = async (workAreaId: string, newStorageCl
           conflicts.push(`LGK ${newStorageClass} darf nach TRGS 510 nicht mit LGK ${existingLGK} ("${inv.masterSubstance.productName}") gelagert werden!`);
         }
       }
-    }
-  }
-
-  // Säure-Laugen Prüfung (TRGS 510 Abschnitt 13.1.2)
-  if (newChemicalType === 'SÄURE' || newChemicalType === 'LAUGE') {
-    for (const inv of existingInventories) {
-      const existingType = inv.masterSubstance.chemicalType;
-      if (newChemicalType === 'SÄURE' && existingType === 'LAUGE') {
-        conflicts.push(`LEBENSGEFAHR! Säuren dürfen nach TRGS 510 nicht mit Laugen ("${inv.masterSubstance.productName}") zusammen gelagert werden (Gefahr exothermer Reaktionen)!`);
-      }
-      if (newChemicalType === 'LAUGE' && existingType === 'SÄURE') {
-        conflicts.push(`LEBENSGEFAHR! Laugen dürfen nach TRGS 510 nicht mit Säuren ("${inv.masterSubstance.productName}") zusammen gelagert werden (Gefahr exothermer Reaktionen)!`);
-      }
-    }
-  }
-
-// Lebensmittel, Futtermittel und Medikamente dürfen mit gar nichts zusammen gelagert werden
-  if (newStorageClass === '10' && newChemicalType === 'LEBENSMITTEL') { // Behelfsmäßig
-     // wird unten in spezieller Logik abgedeckt
-  }
-
-  // Erweiterte Lebensmittel & Futtermittel Prüfung (TRGS 510)
-  if (newChemicalType === 'LEBENSMITTEL') {
-    if (existingInventories.length > 0) {
-      conflicts.push(`VERBOT! Lebensmittel/Futtermittel/Medikamente dürfen nach TRGS 510 nicht mit Gefahrstoffen zusammen gelagert werden!`);
-    }
-  } else {
-    // Prüfen ob schon Lebensmittel im Raum sind
-    const hasLebensmittel = existingInventories.some(inv => inv.masterSubstance.chemicalType === 'LEBENSMITTEL');
-    if (hasLebensmittel) {
-      conflicts.push(`VERBOT! Dieser Raum enthält Lebensmittel/Futtermittel. Gefahrstoffe dürfen hier nicht gelagert werden!`);
     }
   }
 

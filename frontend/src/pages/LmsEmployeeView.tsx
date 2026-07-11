@@ -1,34 +1,42 @@
 import { useState, useEffect } from 'react';
-import { BookOpen, CheckCircle, ExternalLink, PlayCircle, ShieldAlert, Award } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { BookOpen, CheckCircle, ExternalLink, PlayCircle, ShieldAlert, Award, LogOut } from 'lucide-react';
+import { LmsCoursePlayer } from '../components/LmsCoursePlayer';
 
 export const LmsEmployeeView = () => {
   const [records, setRecords] = useState<any[]>([]);
   const [activeCourse, setActiveCourse] = useState<any>(null);
-  
-  // Für das UI-Mocking nutzen wir eine feste Employee-ID
-  // In einer echten App kommt die aus dem Auth-Context!
-  const DUMMY_EMPLOYEE_ID = '3887d1df-0b5c-4b68-b753-4852c0383794'; 
+  const [employee, setEmployee] = useState<any>(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
-    fetchRecords();
+    const savedEmp = localStorage.getItem('lmsEmployee');
+    const token = localStorage.getItem('lmsToken');
+    
+    if (!savedEmp || !token) {
+      navigate('/lms/login');
+      return;
+    }
+    
+    const emp = JSON.parse(savedEmp);
+    setEmployee(emp);
+    fetchRecords(emp.id, token);
   }, []);
 
-  const fetchRecords = async () => {
+  const fetchRecords = async (empId: string, token: string) => {
     try {
-      // Wir fetchen einfach alle Module für die Demo und mocken die Zuweisung,
-      // da wir noch keine echte Login-Session haben.
-      const res = await fetch('http://localhost:3000/api/lms/modules');
-      const modules = await res.json();
-      
-      // Mappe Module in "Employee Records"
-      const dummyRecords = modules.map((mod: any) => ({
-        id: 'rec-' + mod.id,
-        trainingModuleId: mod.id,
-        trainingModule: mod,
-        status: 'ASSIGNED',
-        score: null
-      }));
-      setRecords(dummyRecords);
+      const res = await fetch(`http://localhost:3000/api/lms/records/${empId}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (!res.ok) {
+        if (res.status === 401) {
+          handleLogout();
+          return;
+        }
+        throw new Error('Fehler beim Laden');
+      }
+      const data = await res.json();
+      setRecords(data);
     } catch (error) {
       console.error('LMS records error', error);
     }
@@ -36,33 +44,73 @@ export const LmsEmployeeView = () => {
 
   const handleStartCourse = (record: any) => {
     if (record.trainingModule.externalFormUrl) {
-      // Redirect to MS Forms / Google Forms
       window.open(record.trainingModule.externalFormUrl, '_blank');
-      // In a real app we'd wait for the webhook. For demo we just alert.
       alert('Sie wurden zu Microsoft/Google Forms weitergeleitet. Sobald Sie das Quiz dort abschließen, wird dies hier automatisch grün!');
     } else {
-      // Start native WBT
       setActiveCourse(record);
     }
   };
 
   const submitQuiz = async (passed: boolean) => {
-    // Demo-Mock für den erfolgreichen Abschluss
-    alert(passed ? 'Herzlichen Glückwunsch! Die Unterweisung wurde protokolliert.' : 'Leider nicht bestanden. Bitte wiederholen Sie das Modul.');
-    setActiveCourse(null);
-    fetchRecords(); // Reload (in real app, we'd update status)
+    try {
+      const token = localStorage.getItem('lmsToken');
+      const res = await fetch(`http://localhost:3000/api/lms/records/${activeCourse.id}/submit`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ passed, score: passed ? 100 : 0 })
+      });
+
+      if (!res.ok) throw new Error('Fehler beim Speichern');
+      
+      alert(passed ? 'Herzlichen Glückwunsch! Die Unterweisung wurde erfolgreich protokolliert.' : 'Leider nicht bestanden. Bitte wiederholen Sie das Modul.');
+      setActiveCourse(null);
+      if (employee) {
+        fetchRecords(employee.id, token || '');
+      }
+    } catch (err) {
+      alert('Fehler bei der Kommunikation mit dem Server.');
+    }
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('lmsEmployee');
+    localStorage.removeItem('lmsToken');
+    navigate('/lms/login');
   };
 
   return (
     <div className="flex h-full bg-slate-50">
       {/* Sidebar: Meine Unterweisungen */}
       <div className="w-80 bg-white border-r border-slate-200 flex flex-col h-full">
-        <div className="p-6 border-b border-slate-200 bg-indigo-600 text-white">
+        <div className="p-6 border-b border-slate-200 bg-indigo-600 text-white relative">
+          <button 
+            onClick={handleLogout}
+            className="absolute top-4 right-4 p-2 bg-indigo-700 hover:bg-indigo-800 rounded-lg transition-colors text-indigo-100 hover:text-white"
+            title="Abmelden"
+          >
+            <LogOut className="w-4 h-4" />
+          </button>
+          
           <h1 className="text-xl font-bold flex items-center gap-2">
             <Award className="w-6 h-6" />
             Mein Lernportal
           </h1>
-          <p className="text-sm text-indigo-100 mt-1">Offene Unterweisungen (TRGS 555 / BioStoffV)</p>
+          <p className="text-sm text-indigo-100 mt-1 mb-3">Offene Unterweisungen (TRGS 555 / BioStoffV)</p>
+          
+          {employee && (
+            <div className="bg-indigo-700/50 rounded-lg p-3 text-sm flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold">
+                {employee.firstName[0]}{employee.lastName[0]}
+              </div>
+              <div>
+                <p className="font-bold">{employee.firstName} {employee.lastName}</p>
+                <p className="text-indigo-200 text-xs">Personalnr: {employee.employeeNumber}</p>
+              </div>
+            </div>
+          )}
         </div>
         
         <div className="flex-1 overflow-y-auto p-4 space-y-3">
@@ -106,54 +154,31 @@ export const LmsEmployeeView = () => {
           )}
         </div>
       </div>
-
-      {/* Main Area: Native Course Player */}
-      <div className="flex-1 flex flex-col bg-slate-100 items-center justify-center">
-        {activeCourse ? (
-          <div className="w-full max-w-3xl bg-white shadow-xl rounded-2xl overflow-hidden border border-slate-200">
-            <div className="bg-indigo-600 p-6 text-white">
-              <h2 className="text-2xl font-bold">{activeCourse.trainingModule.title}</h2>
-              <p className="opacity-80">Lesen Sie die folgenden Hinweise aufmerksam durch.</p>
-            </div>
-            
-            <div className="p-8 min-h-[300px] text-lg text-slate-700 leading-relaxed">
-              {/* Hier würde der Slider/Player für die JSON-Folien laufen. Für die Demo zeigen wir einen fixen Text. */}
-              <p className="mb-4">Willkommen zur Unterweisung. Beachten Sie bei der Arbeit mit Gefahrstoffen stets die PSA-Vorgaben.</p>
-              <div className="bg-amber-50 border-l-4 border-amber-500 p-4 mb-6">
-                <strong>Wichtig:</strong> Schutzbrille und säurefeste Handschuhe sind zwingend erforderlich!
-              </div>
-              
-              <hr className="my-8 border-slate-200" />
-              
-              <h3 className="font-bold text-xl mb-4">Quiz: Wissensüberprüfung</h3>
-              <div className="space-y-3">
-                <p>Ist das Tragen einer Schutzbrille bei dieser Tätigkeit verpflichtend?</p>
-                <label className="flex items-center gap-3 p-3 border rounded hover:bg-slate-50 cursor-pointer">
-                  <input type="radio" name="q1" value="yes" />
-                  Ja, immer.
-                </label>
-                <label className="flex items-center gap-3 p-3 border rounded hover:bg-slate-50 cursor-pointer">
-                  <input type="radio" name="q1" value="no" />
-                  Nein, nur bei Spritzgefahr.
-                </label>
-              </div>
-            </div>
-            
-            <div className="bg-slate-50 p-6 border-t border-slate-200 flex justify-end gap-3">
-              <button onClick={() => setActiveCourse(null)} className="px-6 py-2.5 text-slate-600 hover:text-slate-900 font-medium transition-colors">Abbrechen</button>
-              <button onClick={() => submitQuiz(true)} className="bg-emerald-600 hover:bg-emerald-700 text-white px-8 py-2.5 rounded-lg font-bold flex items-center gap-2 shadow-sm transition-colors">
-                <CheckCircle className="w-5 h-5" /> Quiz abschließen
-              </button>
-            </div>
-          </div>
-        ) : (
+      {/* Main Content Area */}
+      {activeCourse ? (
+        <div className="flex-1 flex flex-col bg-slate-900 absolute inset-0 z-50">
+          <LmsCoursePlayer
+            moduleTitle={activeCourse.trainingModule.title}
+            slides={
+              Array.isArray(activeCourse.trainingModule.content)
+                ? activeCourse.trainingModule.content
+                : (typeof activeCourse.trainingModule.content === 'string' && activeCourse.trainingModule.content.startsWith('['))
+                  ? JSON.parse(activeCourse.trainingModule.content)
+                  : []
+            }
+            onComplete={(passed) => submitQuiz(passed)}
+            onCancel={() => setActiveCourse(null)}
+          />
+        </div>
+      ) : (
+        <div className="flex-1 flex flex-col items-center justify-center p-8 bg-slate-50 relative">
           <div className="text-center opacity-50">
             <Award className="w-24 h-24 mx-auto mb-4 text-slate-400" />
             <h2 className="text-2xl font-bold text-slate-600">Lernportal</h2>
             <p className="text-slate-500">Wählen Sie links eine Unterweisung aus, um zu starten.</p>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 };

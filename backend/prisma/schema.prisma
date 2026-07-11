@@ -31,7 +31,7 @@ model Tenant {
   legalSettings LegalSettings?
 }
 
-// --- Modul 13: Impressum & DSGVO ---
+// --- Modul 13: Impressum & DSGVO & SMTP ---
 model LegalSettings {
   id              String @id @default(uuid())
   tenantId        String @unique
@@ -46,6 +46,22 @@ model LegalSettings {
   logoBase64      String?  // base64 encoded image
   aiProvider      String?
   aiApiKey        String?
+  // SMTP-Konfiguration (E-Mail-Versand)
+  smtpProvider    String?  // z.B. "microsoft365", "google", "custom"
+  smtpHost        String?
+  smtpPort        Int?
+  smtpSecure      Boolean? @default(false) // true = TLS (465), false = STARTTLS (587)
+  smtpUser        String?
+  smtpPass        String?  // Verschlüsselt gespeichert
+  smtpFrom        String?  // Absender-Adresse
+  // SSO-Konfiguration (Modul 22)
+  ssoEnabled      Boolean? @default(false)
+  ssoProvider     String?  // "oidc" oder "saml"
+  ssoClientId     String?
+  ssoClientSecret String?  // Verschlüsselt
+  ssoIssuerUrl    String?  // z.B. https://login.microsoftonline.com/{tenantId}/v2.0
+  ssoCallbackUrl  String?  // z.B. http://localhost:3000/api/auth/sso/callback
+  ssoGroupMapping String?  // JSON: {"AD-Gruppe": "ADMIN", "Viewer-Gruppe": "VIEWER"}
 }
 
 model Location {
@@ -68,6 +84,7 @@ model Location {
   documents    Document[]
   asbestosFindings AsbestosFinding[]
   RevisionTask RevisionTask[]
+  users        User[]
 }
 
 // --- Modul 23: Asbest-Kataster (TRGS 519) ---
@@ -79,6 +96,7 @@ model AsbestosFinding {
   exactSpot   String   // Freitext, z.B. "Heizungskeller, Wand X"
   status      String   // z.B. "Suspected", "Confirmed", "Remediated"
   notes       String?
+  exposedEmployees Employee[]
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
@@ -127,13 +145,29 @@ model User {
   id           String   @id @default(uuid())
   email        String   @unique
   passwordHash String
-  // SQLite kompatibel: Role als einfacher String
-  role         String   @default("VIEWER") 
-  preferences  String?  // JSON String für UI-Settings (z.B. ausgeblendete Spalten)
+  role         String   @default("VIEWER")  // ADMIN, SAFETY_OFFICER, LOCATION_MANAGER, VIEWER
+  status       String   @default("PENDING_APPROVAL") // PENDING_APPROVAL, ACTIVE, SUSPENDED
+  firstName    String?
+  lastName     String?
+  tokenVersion Int      @default(0) // Increment → invalidates all issued JWTs
+  preferences  String?  // JSON String für UI-Settings
   
+  locations    Location[]
   auditLogs    AuditLog[]
+  resetTokens  PasswordResetToken[]
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+}
+
+// --- Modul: Password Reset Tokens ---
+model PasswordResetToken {
+  id        String    @id @default(uuid())
+  token     String    @unique  // crypto.randomBytes(64).toString('hex')
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime  // now() + 1h
+  usedAt    DateTime? // null = unused, set on consumption (single-use)
+  createdAt DateTime  @default(now())
 }
 
 // --- Modul 6: Daten-Trennung (Phase 1) ---
@@ -148,13 +182,17 @@ model HazardousSubstanceMaster {
   agwValue     String?  // Auch für MAK, DNEL, BGW
   wgk          Int?     // 1, 2, 3
   storageClass String?  // TRGS 510 LGK (z.B. "3", "8A", "10")
-  chemicalType String?  // SÄURE, LAUGE, SONSTIGES (für TRGS 510)
-  
+  storageIncompatibilities String?  // Zusammenlagerungsverbote (Abschnitt 7.2)
+  incompatibleMaterials    String?  // Unverträgliche Materialien (Abschnitt 10.5)
   // Modul: SDB Management & Fristen
   sdbDate                DateTime?
+  sdbFilePath            String?
   nextReviewDate         DateTime?
   responsiblePerson      String?
   autoMailToManufacturer Boolean   @default(false)
+  autoMailAdvanceDays    Int       @default(30)
+  manufacturerEmail      String?
+  lastManufacturerMailDate DateTime?
   
   isKrebserzeugend       Boolean @default(false)
   isMutagen              Boolean @default(false)
@@ -166,6 +204,9 @@ model HazardousSubstanceMaster {
   inventories            LocalSubstanceInventory[]
   employeeExposures      EmployeeExposure[]
   trainingModules        TrainingModule[]
+  profileItems           SubstanceProfileItem[]
+  revisionTasks          RevisionTask[]
+  snapshots              SubstanceSnapshot[]
   createdAt              DateTime @default(now())
   updatedAt              DateTime @updatedAt
 }
@@ -240,9 +281,12 @@ model LocalSubstanceInventory {
 // Modul 20: EMKG Wirksamkeitsprüfung (Schutzleitfäden)
 model EffectivenessCheck {
   id              String   @id @default(uuid())
-  inventoryId     String
-  inventory       LocalSubstanceInventory @relation(fields: [inventoryId], references: [id], onDelete: Cascade)
+  inventoryId     String?
+  inventory       LocalSubstanceInventory? @relation(fields: [inventoryId], references: [id], onDelete: Cascade)
   
+  biologicalSubstanceId String?
+  biologicalSubstance   BiologicalSubstance? @relation(fields: [biologicalSubstanceId], references: [id], onDelete: Cascade)
+
   guidelineCode   String
   title           String
   auditor         String?
@@ -283,13 +327,15 @@ model OperatingInstruction {
   updatedAt       DateTime @updatedAt
 }
 
-// --- Audit-Log (Modul 6) ---
+// --- Audit-Log (Modul 6) — Revisionssicher mit Hash-Kette ---
 model AuditLog {
   id        String   @id @default(uuid())
+  seqNo     Int?     @unique // Lückenlose Sequenz für Forensik (app-managed, null für Legacy-Einträge)
   action    String   
   details   String
   hashRef   String?  
-  hash      String?  
+  hash      String?  // SHA256 dieses Eintrags
+  prevHash  String?  // SHA256 des vorherigen Eintrags (Blockchain-Kette)
   entityId  String?  
   
   userId    String?
@@ -324,7 +370,6 @@ model HazardousSubstance {
   updatedAt      DateTime @updatedAt
   documents      Document[]
   vorsorgeReports VorsorgeReport[]
-  revisionTasks  RevisionTask[]
 }
 
 model BiologicalSubstance {
@@ -335,11 +380,13 @@ model BiologicalSubstance {
   isTargetedActivity Boolean @default(false)
   transmissionPath   String?
   vaccinationOffer   String?
-  workAreaId      String
+  notes              String?
+  workAreaId         String
   workArea        WorkArea @relation(fields: [workAreaId], references: [id], onDelete: Cascade)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
   documents       Document[]
+  effectivenessChecks EffectivenessCheck[]
 }
 
 model Document {
@@ -362,6 +409,8 @@ model Document {
   biologicalSubstance   BiologicalSubstance? @relation(fields: [biologicalSubstanceId], references: [id], onDelete: Cascade)
   inventoryId           String?
   inventory             LocalSubstanceInventory? @relation(fields: [inventoryId], references: [id], onDelete: Cascade)
+  
+  trainingModules       TrainingModule[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -408,7 +457,7 @@ model RevisionTask {
   regulation   Regulation? @relation(fields: [regulationId], references: [id], onDelete: Cascade)
 
   hazardousSubstanceId String?
-  hazardousSubstance   HazardousSubstance? @relation(fields: [hazardousSubstanceId], references: [id], onDelete: Cascade)
+  hazardousSubstance   HazardousSubstanceMaster? @relation(fields: [hazardousSubstanceId], references: [id], onDelete: Cascade)
 
   locationId String?
   location   Location? @relation(fields: [locationId], references: [id], onDelete: Cascade)
@@ -438,12 +487,24 @@ model Employee {
   firstName       String
   lastName        String
   employeeNumber  String?            // Personalnummer
+  pin             String?            // 4-stellige PIN für den Login (Kiosk-Modus)
+  email           String?
+  phone           String?
   dateOfBirth     DateTime?
   department      String?            // z.B. "Haustechnik"
+  manualVorsorgen String?            // JSON-Liste oder kommagetrennte Strings für manuelle ArbMedVV Tags (z.B. G 37)
+  
+  supervisorId    String?
+  supervisor      Employee?          @relation("SupervisorRelation", fields: [supervisorId], references: [id])
+  subordinates    Employee[]         @relation("SupervisorRelation")
+
   exposures       EmployeeExposure[]
   trainingRecords EmployeeTrainingRecord[]
-  createdAt       DateTime           @default(now())
-  updatedAt       DateTime           @updatedAt
+  readConfirmations ReadConfirmation[]
+  notifications    NotificationTask[]
+  asbestosFindings AsbestosFinding[]
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
 }
 
 model EmployeeExposure {
@@ -461,12 +522,27 @@ model EmployeeExposure {
   assignedAt         DateTime                 @default(now())
 }
 
+model NotificationTask {
+  id               String   @id @default(uuid())
+  type             String   // "REMINDER_EMPLOYEE", "ESCALATION_SUPERVISOR"
+  employeeId       String
+  employee         Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  trainingRecordId String?
+  status           String   @default("PENDING") // PENDING, SENT, FAILED
+  sendAfter        DateTime
+  sentAt           DateTime?
+  errorLog         String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
 // --- Modul 22: LMS & Unterweisungen ---
 model TrainingModule {
   id              String   @id @default(uuid())
   title           String
   description     String?
   targetAudience  String?  // z.B. "Alle", "Reinigungskräfte", "Asbest-Sanierer"
+  sortOrder       Int      @default(0) // Für Drag & Drop Sortierung
   
   // Verknüpfung zu Gefährdungsquellen (Gefahrstoff, Biostoff, Asbest)
   hazardousSubstanceId String?
@@ -478,9 +554,25 @@ model TrainingModule {
   externalFormUrl String?  // Optionaler Link zu MS/Google Forms
   webhookSecret   String?  // Für sichere Übertragung von externen Formularen
   
+  documents       Document[] // Angehängte Betriebsanweisungen oder PDFs
   records         EmployeeTrainingRecord[]
+  trainingNeeds   TrainingNeed[]
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+}
+
+model TrainingNeed {
+  id               String   @id @default(uuid())
+  substanceName    String   
+  substanceType    String   // GEFAHRSTOFF, BIOSTOFF, ASBEST
+  workAreaName     String?  
+  status           String   @default("PENDING") // PENDING, RESOLVED
+  
+  trainingModuleId String?
+  trainingModule   TrainingModule? @relation(fields: [trainingModuleId], references: [id], onDelete: SetNull)
+
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 }
 
 model EmployeeTrainingRecord {
@@ -498,4 +590,64 @@ model EmployeeTrainingRecord {
 
   createdAt        DateTime       @default(now())
   updatedAt        DateTime       @updatedAt
+}
+
+// --- Modul: Gefahrstoff-Profile ---
+
+model SubstanceProfile {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  description String?
+  items       SubstanceProfileItem[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model SubstanceProfileItem {
+  id                 String @id @default(uuid())
+  profileId          String
+  profile            SubstanceProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  
+  // Für Gefahrstoffe
+  masterSubstanceId  String?
+  masterSubstance    HazardousSubstanceMaster? @relation(fields: [masterSubstanceId], references: [id], onDelete: Cascade)
+  
+  // Für Biostoffe
+  isBiological       Boolean @default(false)
+  bioName            String?
+  bioRiskGroup       Int?
+  bioTargeted        Boolean @default(false)
+}
+
+// --- Modul 11: Digitale Lesebestätigung ---
+model ReadConfirmation {
+  id              String   @id @default(uuid())
+  employeeId      String
+  employee        Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  documentId      String?  // Optionaler Bezug auf ein Dokument (BA)
+  substanceId     String?  // Optionaler Bezug auf ein LocalSubstanceInventory
+  substanceName   String?  // Klartextname für Audit-Zwecke
+  confirmedAt     DateTime @default(now())
+  ipAddress       String?
+}
+
+// --- Modul 22: Stoff-Historisierung (Freeze-State bei SDB-Änderung) ---
+model SubstanceSnapshot {
+  id                  String   @id @default(uuid())
+  masterSubstanceId   String
+  masterSubstance     HazardousSubstanceMaster @relation(fields: [masterSubstanceId], references: [id], onDelete: Cascade)
+  snapshotData        String   // Vollständiger JSON-Dump aller Felder zum Zeitpunkt der Änderung
+  reason              String   // z.B. "SDB_UPDATE", "REVISION", "MANUAL_FREEZE"
+  createdBy           String?  // User-E-Mail
+  snapshotHash        String   // SHA256 über snapshotData für Integritätsprüfung
+  createdAt           DateTime @default(now())
+}
+
+// --- Modul 22: SSO Gruppen-Mapping ---
+model SsoMapping {
+  id            String @id @default(uuid())
+  adGroupName   String @unique
+  systemRole    String // ADMIN, UNIT_LEADER, VIEWER, etc.
+  locationId    String? // Optionaler Standort-Bezug
+  createdAt     DateTime @default(now())
 }

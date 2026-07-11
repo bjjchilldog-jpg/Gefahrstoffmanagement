@@ -62,10 +62,14 @@ export const getGuidelinesByLevel = (level: number) => {
   let relevant = EMKG_CATALOG.filter(g => g.level === 1);
   
   if (level >= 2) {
-    relevant = [...relevant, ...EMKG_CATALOG.filter(g => g.level === 2)];
+    // Only include generic level 2 guidelines
+    const genericL2 = ['200', '240', '2020', 'pc-270'];
+    relevant = [...relevant, ...EMKG_CATALOG.filter(g => g.level === 2 && genericL2.includes(g.code))];
   }
   if (level >= 3) {
-    relevant = [...relevant, ...EMKG_CATALOG.filter(g => g.level === 3)];
+    // Only include generic level 3 guidelines
+    const genericL3 = ['300', 'pc-370'];
+    relevant = [...relevant, ...EMKG_CATALOG.filter(g => g.level === 3 && genericL3.includes(g.code))];
   }
   return relevant;
 };

@@ -23,7 +23,9 @@ import sdbRoutes from './routes/sdb.routes';
 import lmsRoutes from './routes/lms.routes';
 import extensionRoutes from './routes/extension.routes';
 import mobileRoutes from './routes/mobile.routes';
-
+import userRoutes from './routes/user.routes';
+import profileRoutes from './routes/profile.routes';
+import pairingRoutes from './routes/pairing.routes';
 dotenv.config();
 
 const app = express();
@@ -77,6 +79,9 @@ app.use('/api/sdb', sdbRoutes);
 app.use('/api/lms', lmsRoutes);
 app.use('/api/extension', extensionRoutes);
 app.use('/api/mobile', mobileRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/profiles', profileRoutes);
+app.use('/api/pairing', pairingRoutes);
 
 // Health Check und Fallback Route
 app.get('/health', (req, res) => {
@@ -101,6 +106,9 @@ app.get('/', (req, res) => {
   `);
 });
 
+import { startCronJobs } from './services/cron.service';
+
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
+  startCronJobs();
 });

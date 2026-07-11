@@ -32,6 +32,25 @@ export const getPendingRevisions = async (req: Request, res: Response) => {
   }
 };
 
+export const getHistoryRevisions = async (req: Request, res: Response) => {
+  try {
+    const tasks = await prisma.revisionTask.findMany({
+      where: { status: 'CONFIRMED' },
+      include: {
+        regulation: true,
+        hazardousSubstance: true,
+        location: true
+      },
+      orderBy: { updatedAt: 'desc' },
+      take: 20 // Limit to last 20 for performance
+    });
+    res.json(tasks);
+  } catch (error) {
+    console.error("Error fetching revision history:", error);
+    res.status(500).json({ error: "Interner Serverfehler" });
+  }
+};
+
 export const confirmRevisionTask = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;

@@ -1,0 +1,40 @@
+{
+  "productName": "schwefelsäure",
+  "manufacturer": "Carl Roth GmbH + Co. KG",
+  "sdbDate": "2025-08-04",
+  "isMixture": true,
+  "hPhrases": [
+    "H290",
+    "H314",
+    "H318",
+    "H315",
+    "H319",
+    "H304"
+  ],
+  "pPhrases": [
+    "P280",
+    "P301+P330+P331",
+    "P303+P361+P353",
+    "P305+P351+P338",
+    "P310"
+  ],
+  "wgk": "1",
+  "casNumber": "020-00-8",
+  "storageClass": null,
+  "agw": null,
+  "chemicalType": "SÄURE",
+  "physicalState": "Flüssigkeit",
+  "isKrebserzeugend": false,
+  "isMutagen": false,
+  "isReproduktionstoxisch": false,
+  "confidence": {
+    "productName": 0.9,
+    "hPhrases": 0.95,
+    "wgk": 0.9,
+    "storageClass": 0,
+    "overall": 0.6875
+  },
+  "extractionMethod": "PDF_REGEX",
+  "needsReview": true,
+  "sdbFilePath": "/uploads/sdb/1783630748456-651127216.pdf"
+}

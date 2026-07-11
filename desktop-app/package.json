@@ -1,0 +1,33 @@
+{
+  "name": "gefahrstoff-wbt-offline",
+  "version": "1.0.0",
+  "description": "Offline-WBT Desktop-App für das Gefahrstoffmanagement-System",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build:win": "electron-builder --win portable",
+    "build:mac": "electron-builder --mac dmg",
+    "build:linux": "electron-builder --linux AppImage"
+  },
+  "build": {
+    "appId": "de.gefahrstoff.wbt",
+    "productName": "Gefahrstoff WBT",
+    "files": ["main.js", "preload.js", "renderer/**/*", "db.js"],
+    "win": {
+      "target": ["portable", "nsis"],
+      "icon": "renderer/icon.ico"
+    },
+    "mac": {
+      "target": ["dmg"],
+      "icon": "renderer/icon.icns"
+    }
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.0.0",
+    "electron-store": "^10.0.0"
+  },
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "electron-builder": "^25.0.0"
+  }
+}

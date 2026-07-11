@@ -88,7 +88,7 @@ export const generateBetriebsanweisung = async (data: any) => {
                       ...(data.effectivenessChecks && data.effectivenessChecks.length > 0 ? 
                         data.effectivenessChecks.map((c: any) => new Paragraph({
                           children: [new TextRun({ text: `• [EMKG ${c.guidelineCode}] ${c.title}`, size: 22, font: 'Arial' })],
-                          spacing: { after: 100, left: 360 }
+                          spacing: { after: 100 }, indent: { left: 360 }
                         })) : [
                           new Paragraph({
                             children: [new TextRun({ text: 'Keine spezifischen P-Sätze hinterlegt.', size: 22, font: 'Arial' })],

@@ -1,0 +1,43 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: gefahrstoff_backend
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      # Prisma Database Connection
+      - DATABASE_URL=file:/app/prisma/data/dev.db
+      - JWT_SECRET=super_secret_jwt_key_please_change
+      # Senden von Mails etc. (Anpassen falls gewünscht)
+      - SMTP_HOST=
+      - SMTP_PORT=
+      - SMTP_USER=
+      - SMTP_PASS=
+      - SMTP_FROM=
+    volumes:
+      # Dauerhafter Speicher für die SQLite-Datenbank
+      - sqlite_data:/app/prisma/data
+      # Dauerhafter Speicher für hochgeladene PDFs (SDB, Zertifikate)
+      - upload_data:/app/uploads
+      - sdb_data:/app/sdb-uploads
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: gefahrstoff_frontend
+    restart: always
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+
+volumes:
+  sqlite_data:
+  upload_data:
+  sdb_data:

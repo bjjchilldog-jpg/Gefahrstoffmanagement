@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gefahrstoff-Manager</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { width: 520px; font-family: 'Segoe UI', system-ui, sans-serif; background: #f8fafc; color: #0f172a; }
+    
+    .header { background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: white; padding: 16px 20px; display: flex; align-items: center; gap: 12px; }
+    .header h1 { font-size: 15px; font-weight: 700; }
+    .header .badge { background: #ef4444; color: white; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 10px; min-width: 22px; text-align: center; }
+    .header .subtitle { font-size: 11px; color: #94a3b8; font-weight: 400; }
+    
+    .tabs { display: flex; background: #e2e8f0; border-bottom: 1px solid #cbd5e1; }
+    .tab { flex: 1; padding: 10px 8px; text-align: center; font-size: 12px; font-weight: 600; cursor: pointer; border: none; background: transparent; color: #64748b; transition: all 0.2s; }
+    .tab.active { background: white; color: #0f172a; box-shadow: 0 -2px 0 #0f172a inset; }
+    .tab:hover:not(.active) { background: #f1f5f9; }
+    
+    .content { padding: 16px 20px; min-height: 200px; max-height: 380px; overflow-y: auto; }
+    .panel { display: none; }
+    .panel.active { display: block; }
+    
+    /* Login */
+    .login-form { display: flex; flex-direction: column; gap: 12px; }
+    .login-form input { padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 13px; }
+    .login-form input:focus { outline: none; border-color: #0f172a; box-shadow: 0 0 0 3px rgba(15,23,42,0.1); }
+    
+    /* Search */
+    .search-box { position: relative; margin-bottom: 12px; }
+    .search-box input { width: 100%; padding: 10px 12px 10px 36px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 13px; }
+    .search-box input:focus { outline: none; border-color: #0f172a; }
+    .search-box .icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: #94a3b8; font-size: 16px; }
+    
+    .result-item { padding: 10px 12px; border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 8px; background: white; cursor: pointer; transition: all 0.15s; }
+    .result-item:hover { border-color: #0f172a; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+    .result-item .name { font-weight: 600; font-size: 13px; color: #0f172a; }
+    .result-item .meta { font-size: 11px; color: #64748b; margin-top: 2px; }
+    .result-item .h-phrases { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 6px; }
+    .result-item .h-phrases span { background: #fef2f2; color: #dc2626; font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: 600; }
+    
+    /* Deadlines */
+    .deadline-card { padding: 12px; border-radius: 8px; margin-bottom: 8px; display: flex; align-items: center; gap: 12px; }
+    .deadline-card.critical { background: #fef2f2; border: 1px solid #fecaca; }
+    .deadline-card.warning { background: #fffbeb; border: 1px solid #fde68a; }
+    .deadline-card.ok { background: #f0fdf4; border: 1px solid #bbf7d0; }
+    .deadline-card .count { font-size: 24px; font-weight: 800; min-width: 40px; text-align: center; }
+    .deadline-card.critical .count { color: #dc2626; }
+    .deadline-card.warning .count { color: #d97706; }
+    .deadline-card.ok .count { color: #16a34a; }
+    .deadline-card .label { font-size: 12px; color: #475569; font-weight: 500; }
+    
+    /* Upload */
+    .drop-zone { border: 2px dashed #cbd5e1; border-radius: 12px; padding: 32px 20px; text-align: center; transition: all 0.2s; cursor: pointer; }
+    .drop-zone:hover, .drop-zone.dragover { border-color: #0f172a; background: #f1f5f9; }
+    .drop-zone .icon-upload { font-size: 32px; margin-bottom: 8px; }
+    .drop-zone p { font-size: 13px; color: #64748b; }
+    
+    .btn { padding: 10px 16px; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 13px; transition: all 0.15s; }
+    .btn-primary { background: #0f172a; color: white; width: 100%; }
+    .btn-primary:hover { background: #1e293b; }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+    
+    .status { font-size: 12px; padding: 8px 12px; border-radius: 8px; margin-top: 12px; text-align: center; }
+    .status.success { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
+    .status.error { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+    .status.info { background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; }
+    
+    .empty { text-align: center; padding: 24px; color: #94a3b8; font-size: 13px; }
+    
+    .footer { padding: 12px 20px; background: #f1f5f9; border-top: 1px solid #e2e8f0; text-align: center; }
+    .footer a { font-size: 12px; color: #2563eb; text-decoration: none; font-weight: 500; }
+    .footer a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div>
+      <h1>⚗️ Gefahrstoff-Manager</h1>
+      <span class="subtitle">Fristen · Suche · Upload</span>
+    </div>
+    <span class="badge" id="deadlineBadge" style="display:none">0</span>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" data-tab="deadlines">🔔 Fristen</button>
+    <button class="tab" data-tab="search">🔍 Suche</button>
+    <button class="tab" data-tab="upload">📤 Upload</button>
+  </div>
+
+  <div class="content">
+    <!-- Login Panel (gezeigt wenn nicht eingeloggt) -->
+    <div class="panel" id="loginPanel">
+      <p style="font-size:13px;color:#64748b;margin-bottom:16px;">Melden Sie sich an, um auf das Gefahrstoffmanagement zuzugreifen.</p>
+      <div class="login-form">
+        <input type="email" id="loginEmail" placeholder="E-Mail-Adresse" />
+        <input type="password" id="loginPassword" placeholder="Passwort" />
+        <button class="btn btn-primary" id="loginBtn">Anmelden</button>
+        <div id="loginStatus"></div>
+      </div>
+    </div>
+
+    <!-- Deadlines -->
+    <div class="panel" id="deadlinesPanel">
+      <div id="deadlinesList"></div>
+    </div>
+
+    <!-- Search -->
+    <div class="panel" id="searchPanel">
+      <div class="search-box">
+        <span class="icon">🔍</span>
+        <input type="text" id="searchInput" placeholder="Stoff suchen (z.B. Aceton, Essigsäure)..." />
+      </div>
+      <div id="searchResults"></div>
+    </div>
+
+    <!-- Upload -->
+    <div class="panel" id="uploadPanel">
+      <div class="drop-zone" id="dropZone">
+        <div class="icon-upload">📄</div>
+        <p><strong>SDB / Betriebsanweisung</strong><br>Datei hier ablegen oder klicken</p>
+        <input type="file" id="fileInput" accept=".pdf,.doc,.docx,.jpg,.png" style="display:none" />
+      </div>
+      <div id="uploadStatus"></div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <a href="http://localhost:5173" target="_blank">Zum vollständigen Dashboard →</a>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

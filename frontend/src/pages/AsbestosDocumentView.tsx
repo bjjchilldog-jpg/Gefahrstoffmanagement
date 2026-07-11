@@ -3,29 +3,32 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { FileText, Printer, ArrowLeft, ShieldAlert, CheckSquare } from 'lucide-react';
 
 export const AsbestosDocumentView = () => {
-  const { workAreaId, inventoryId, docType } = useParams();
+  const { locationId, findingId } = useParams();
   const navigate = useNavigate();
 
-  // In a real app, we would fetch the specific inventory details here
-  // For the prototype, we use the URL and mock data based on the typical use case
-  const isLarge = window.location.href.includes('Umfangreiche') || !window.location.href.includes('Kleinst'); 
-  // We can pass the activity type via state or just mock it here. Let's mock it for the demo.
-  // Actually, let's just show both if we don't know, or let the user choose.
-  const [activity, setActivity] = React.useState('Kleinsttätigkeit');
+  const [finding, setFinding] = React.useState<any>(null);
+  const [activity, setActivity] = React.useState('Kleinsttätigkeit'); // Placeholder for now
 
   React.useEffect(() => {
-    // Fetch the substance to see if it's "Umfangreiche Sanierung"
-    fetch(`http://localhost:3000/api/substances?workAreaId=${workAreaId}`)
+    fetch('http://localhost:3000/api/tenants')
       .then(res => res.json())
-      .then(data => {
-        const item = data.hazardous.find((s: any) => s.id === inventoryId);
-        if (item && item.asbestosActivity) {
-          setActivity(item.asbestosActivity);
+      .then(tenants => {
+        for (const t of tenants) {
+          const loc = t.locations.find((l: any) => l.id === locationId);
+          if (loc && loc.asbestosFindings) {
+            const f = loc.asbestosFindings.find((f: any) => f.id === findingId);
+            if (f) {
+              setFinding(f);
+              setActivity(f.status === 'Verdacht' ? 'Kleinsttätigkeit' : 'Umfangreiche Sanierung');
+            }
+          }
         }
       });
-  }, [workAreaId, inventoryId]);
+  }, [locationId, findingId]);
 
-  if (docType === 'ba') {
+  if (!finding) return <div className="p-8">Lade Dokument...</div>;
+
+  if (true) {
     return (
       <div className="max-w-4xl mx-auto bg-white min-h-screen p-8 shadow-lg print:shadow-none print:p-0">
         <div className="flex justify-between items-center mb-8 print:hidden">
@@ -49,8 +52,8 @@ export const AsbestosDocumentView = () => {
               <p className="text-lg font-bold text-slate-700 mt-1">gemäß § 14 GefStoffV / TRGS 555</p>
             </div>
             <div className="text-right text-sm">
-              <p>Arbeitsbereich: {workAreaId}</p>
-              <p>Freigegeben durch: _________________</p>
+              <p>Bauteil: {finding.component}</p>
+              <p>Fundort: {finding.exactSpot}</p>
               <p>Datum: {new Date().toLocaleDateString()}</p>
             </div>
           </div>
@@ -58,9 +61,7 @@ export const AsbestosDocumentView = () => {
           <div className="mb-6">
             <h2 className="text-xl font-bold bg-orange-500 text-white p-2 mb-2 uppercase">1. Arbeitsbereich / Tätigkeit</h2>
             <p className="font-bold text-lg mb-2">
-              {activity === 'Umfangreiche Sanierung' ? 
-                'Umfangreiche Asbestarbeiten (Abbruch, Sanierung, Instandhaltung)' : 
-                'Umgang mit Asbestverdacht (Begehung & Kleinsttätigkeiten)'}
+              Asbest-Kategorie: {finding.status} ({activity})
             </p>
             <p>
               {activity === 'Umfangreiche Sanierung' ? 
@@ -178,7 +179,7 @@ export const AsbestosDocumentView = () => {
         </div>
 
         <div className="grid grid-cols-2 gap-4 mb-8 bg-slate-50 p-4 rounded border border-slate-200">
-          <div><label className="text-xs font-bold text-slate-500">Objekt/Raum</label><div className="font-medium">{workAreaId}</div></div>
+          <div><label className="text-xs font-bold text-slate-500">Objekt/Raum</label><div className="font-medium">{finding.exactSpot}</div></div>
           <div><label className="text-xs font-bold text-slate-500">Datum / Uhrzeit</label><div className="font-medium">{new Date().toLocaleString()}</div></div>
           <div className="col-span-2"><label className="text-xs font-bold text-slate-500">Tätigkeitstyp</label><div className="font-medium text-blue-700">{activity}</div></div>
         </div>

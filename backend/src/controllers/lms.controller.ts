@@ -1,8 +1,44 @@
 import { Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import crypto from 'crypto';
+import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
 
 const prisma = new PrismaClient();
+const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-key-gefahrstoff';
+
+export const lmsLogin = async (req: Request, res: Response) => {
+  try {
+    const { employeeNumber, pin } = req.body;
+    if (!employeeNumber || !pin) {
+      return res.status(400).json({ error: 'Personalnummer und PIN sind erforderlich.' });
+    }
+
+    const employee = await prisma.employee.findFirst({
+      where: { employeeNumber }
+    });
+
+    if (!employee || !employee.pin) {
+      return res.status(401).json({ error: 'Ungültige Personalnummer oder PIN.' });
+    }
+
+    const isMatch = await bcrypt.compare(pin, employee.pin);
+    if (!isMatch) {
+      return res.status(401).json({ error: 'Ungültige Personalnummer oder PIN.' });
+    }
+
+    const token = jwt.sign(
+      { id: employee.id, employeeNumber: employee.employeeNumber, role: 'EMPLOYEE' },
+      JWT_SECRET,
+      { expiresIn: '8h' }
+    );
+
+    res.json({ token, employee });
+  } catch (error) {
+    console.error('LMS Login Error:', error);
+    res.status(500).json({ error: 'Ein Fehler ist beim Login aufgetreten.' });
+  }
+};
 
 // Generiert fälschungssicheren Hash für das Zertifikat
 const generateCertificateHash = (employeeId: string, moduleId: string, timestamp: string) => {
@@ -13,7 +49,13 @@ const generateCertificateHash = (employeeId: string, moduleId: string, timestamp
 export const getModules = async (req: Request, res: Response) => {
   try {
     const modules = await prisma.trainingModule.findMany({
-      include: { hazardousSubstance: true }
+      include: { 
+        hazardousSubstance: true,
+        records: {
+          include: { employee: true }
+        }
+      },
+      orderBy: { sortOrder: 'asc' }
     });
     res.json(modules);
   } catch (error) {
@@ -48,11 +90,11 @@ export const createModule = async (req: Request, res: Response) => {
 export const updateModule = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { content, quizQuestions, externalFormUrl } = req.body;
+    const { title, targetAudience, content, quizQuestions, externalFormUrl } = req.body;
     
     const updated = await prisma.trainingModule.update({
       where: { id },
-      data: { content, quizQuestions, externalFormUrl }
+      data: { title, targetAudience, content, quizQuestions, externalFormUrl }
     });
     
     res.json(updated);
@@ -61,18 +103,125 @@ export const updateModule = async (req: Request, res: Response) => {
   }
 };
 
-// 2. Zuweisung & Mitarbeiter Record
-export const assignModule = async (req: Request, res: Response) => {
+export const reorderModules = async (req: Request, res: Response) => {
   try {
-    const { employeeId, moduleId } = req.body;
-    const record = await prisma.employeeTrainingRecord.create({
+    const { order } = req.body; // array of { id, sortOrder }
+    
+    await prisma.$transaction(
+      order.map((item: any) => 
+        prisma.trainingModule.update({
+          where: { id: item.id },
+          data: { sortOrder: item.sortOrder }
+        })
+      )
+    );
+    
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: 'Fehler beim Neusortieren der Module' });
+  }
+};
+
+export const deleteModule = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    
+    // Check if there are any dependent records that might prevent deletion
+    // Wait, let's just let prisma do it. If it fails due to records, we return an error.
+    await prisma.trainingModule.delete({ where: { id } });
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Delete module error:', error);
+    res.status(500).json({ error: 'Fehler beim Löschen des Moduls (evtl. existieren noch verknüpfte Trainingsdaten)' });
+  }
+};
+
+// 2. Needs Management (Bedarfspool)
+export const getNeeds = async (req: Request, res: Response) => {
+  try {
+    const needs = await prisma.trainingNeed.findMany({
+      where: { status: 'PENDING' },
+      orderBy: { createdAt: 'desc' }
+    });
+    res.json(needs);
+  } catch (error) {
+    res.status(500).json({ error: 'Fehler beim Laden der Bedarfe' });
+  }
+};
+
+export const groupNeeds = async (req: Request, res: Response) => {
+  try {
+    const { needIds, title } = req.body;
+    
+    if (!needIds || needIds.length === 0) {
+      return res.status(400).json({ error: 'Keine Bedarfe ausgewählt.' });
+    }
+
+    const needs = await prisma.trainingNeed.findMany({
+      where: { id: { in: needIds } }
+    });
+
+    const substanceNames = needs.map(n => n.substanceName).join(', ');
+    const webhookSecret = crypto.randomBytes(16).toString('hex');
+
+    const newModule = await prisma.trainingModule.create({
       data: {
-        employeeId,
-        trainingModuleId: moduleId,
-        status: 'ASSIGNED'
+        title: title || 'Gruppenunterweisung',
+        targetAudience: 'Alle betroffenen Mitarbeitenden',
+        content: JSON.stringify([
+          { type: 'text', text: `Willkommen zur Unterweisung. \n\nDiese Unterweisung gilt für folgende Gefährdungen/Tätigkeiten:\n${substanceNames}` }
+        ]),
+        quizQuestions: JSON.stringify([{ question: 'Haben Sie die Unterweisung verstanden?', options: ['Ja', 'Nein'], correctIndex: 0 }]),
+        webhookSecret,
+        trainingNeeds: {
+          connect: needIds.map((id: string) => ({ id }))
+        }
       }
     });
-    res.json(record);
+
+    await prisma.trainingNeed.updateMany({
+      where: { id: { in: needIds } },
+      data: { status: 'RESOLVED' }
+    });
+
+    res.json(newModule);
+  } catch (error) {
+    res.status(500).json({ error: 'Fehler beim Erstellen des Gruppen-WBTs' });
+  }
+};
+
+// 3. Zuweisung & Mitarbeiter Record
+export const assignModule = async (req: Request, res: Response) => {
+  try {
+    const { employeeIds, moduleId } = req.body;
+    if (!employeeIds || !Array.isArray(employeeIds)) {
+      return res.status(400).json({ error: 'employeeIds array is required' });
+    }
+    
+    // Check existing assignments to prevent duplicates
+    const existingRecords = await prisma.employeeTrainingRecord.findMany({
+      where: {
+        trainingModuleId: moduleId,
+        employeeId: { in: employeeIds },
+        status: { in: ['ASSIGNED'] }
+      }
+    });
+    
+    const existingEmpIds = new Set(existingRecords.map(r => r.employeeId));
+    const newEmpIds = employeeIds.filter(id => !existingEmpIds.has(id));
+
+    if (newEmpIds.length > 0) {
+      await prisma.employeeTrainingRecord.createMany({
+        data: newEmpIds.map(empId => ({
+          employeeId: empId,
+          trainingModuleId: moduleId,
+          status: 'ASSIGNED'
+        }))
+      });
+    }
+    
+    res.json({ success: true, assignedCount: newEmpIds.length, skippedCount: employeeIds.length - newEmpIds.length });
   } catch (error) {
     res.status(500).json({ error: 'Fehler bei der Zuweisung' });
   }
@@ -103,7 +252,21 @@ export const submitQuiz = async (req: Request, res: Response) => {
     if (passed) {
       const completedAt = new Date();
       const validUntil = new Date();
-      validUntil.setFullYear(validUntil.getFullYear() + 1); // 12 Monate Gültigkeit (TRGS 555)
+      
+      // JArbSchG: Unter 18 Jährige müssen halbjährlich unterwiesen werden
+      let isUnder18 = false;
+      if (record.employee.dateOfBirth) {
+        const ageDifMs = Date.now() - new Date(record.employee.dateOfBirth).getTime();
+        const ageDate = new Date(ageDifMs);
+        const age = Math.abs(ageDate.getUTCFullYear() - 1970);
+        isUnder18 = age < 18;
+      }
+      
+      if (isUnder18) {
+        validUntil.setMonth(validUntil.getMonth() + 6); // 6 Monate
+      } else {
+        validUntil.setFullYear(validUntil.getFullYear() + 1); // 12 Monate (TRGS 555)
+      }
       
       const certificateHash = generateCertificateHash(record.employeeId, record.trainingModuleId, completedAt.toISOString());
 
@@ -128,6 +291,26 @@ export const submitQuiz = async (req: Request, res: Response) => {
           ipAddress: req.ip || '127.0.0.1'
         }
       });
+
+      // Supervisor Benachrichtigung bei Erledigung
+      const employeeWithSupervisor = await prisma.employee.findUnique({
+        where: { id: record.employee.id },
+        include: { supervisor: true }
+      });
+
+      if (employeeWithSupervisor?.supervisor) {
+        await prisma.notificationTask.create({
+          data: {
+            type: 'COMPLETION_SUPERVISOR',
+            employeeId: employeeWithSupervisor.supervisor.id,
+            trainingRecordId: record.id,
+            status: 'SENT',
+            sendAfter: new Date(),
+            sentAt: new Date()
+          }
+        });
+        console.log(`[EMAIL/SMS] -> An Vorgesetzten: ${employeeWithSupervisor.supervisor.firstName} | Betreff: Erledigung: ${record.employee.firstName} ${record.employee.lastName} hat Unterweisung "${record.trainingModule.title}" abgeschlossen.`);
+      }
 
       res.json(updated);
     } else {
@@ -169,7 +352,22 @@ export const webhookSubmit = async (req: Request, res: Response) => {
     if (passed) {
       const completedAt = new Date();
       const validUntil = new Date();
-      validUntil.setFullYear(validUntil.getFullYear() + 1);
+      
+      const employee = await prisma.employee.findUnique({ where: { id: employeeId } });
+      
+      let isUnder18 = false;
+      if (employee?.dateOfBirth) {
+        const ageDifMs = Date.now() - new Date(employee.dateOfBirth).getTime();
+        const ageDate = new Date(ageDifMs);
+        const age = Math.abs(ageDate.getUTCFullYear() - 1970);
+        isUnder18 = age < 18;
+      }
+      
+      if (isUnder18) {
+        validUntil.setMonth(validUntil.getMonth() + 6);
+      } else {
+        validUntil.setFullYear(validUntil.getFullYear() + 1);
+      }
       
       const certificateHash = generateCertificateHash(employeeId, moduleId, completedAt.toISOString());
 
@@ -183,8 +381,6 @@ export const webhookSubmit = async (req: Request, res: Response) => {
           certificateHash
         }
       });
-
-      const employee = await prisma.employee.findUnique({ where: { id: employeeId } });
 
       await prisma.auditLog.create({
         data: {
@@ -205,5 +401,62 @@ export const webhookSubmit = async (req: Request, res: Response) => {
     res.json({ success: true, message: 'Webhook erfolgreich verarbeitet.' });
   } catch (error) {
     res.status(500).json({ error: 'Fehler bei der Webhook-Verarbeitung' });
+  }
+};
+// 5. Eskalations-Prozess (Cronjob Demo)
+export const triggerEscalation = async (req: Request, res: Response) => {
+  try {
+    // Finde alle zugewiesenen Trainings (in echt: mit abgelaufener Frist)
+    const overdueRecords = await prisma.employeeTrainingRecord.findMany({
+      where: { status: 'ASSIGNED' },
+      include: {
+        employee: { include: { supervisor: true } },
+        trainingModule: true
+      }
+    });
+
+    const logs = [];
+
+    for (const record of overdueRecords) {
+      const emp = record.employee;
+      const mod = record.trainingModule;
+
+      // 1. Benachrichtigung an Mitarbeiter simulieren
+      const reminderTask = await prisma.notificationTask.create({
+        data: {
+          type: 'REMINDER_EMPLOYEE',
+          employeeId: emp.id,
+          trainingRecordId: record.id,
+          status: 'SENT',
+          sendAfter: new Date(),
+          sentAt: new Date()
+        }
+      });
+
+      console.log(`[EMAIL/SMS] -> An: ${emp.email || emp.phone || emp.firstName} | Betreff: Erinnerung: Unterweisung "${mod.title}" ist fällig!`);
+      logs.push(`Erinnerung gesendet an ${emp.firstName} ${emp.lastName}`);
+
+      // 2. Benachrichtigung an Vorgesetzten simulieren, falls vorhanden
+      if (emp.supervisor) {
+        await prisma.notificationTask.create({
+          data: {
+            type: 'ESCALATION_SUPERVISOR',
+            employeeId: emp.supervisor.id,
+            trainingRecordId: record.id,
+            status: 'SENT',
+            sendAfter: new Date(),
+            sentAt: new Date()
+          }
+        });
+
+        console.log(`[EMAIL/SMS] -> An Vorgesetzten: ${emp.supervisor.email || emp.supervisor.firstName} | Betreff: Eskalation: ${emp.firstName} ${emp.lastName} hat Unterweisung "${mod.title}" verpasst!`);
+        logs.push(`Eskalation gesendet an Vorgesetzten ${emp.supervisor.firstName} ${emp.supervisor.lastName}`);
+      }
+    }
+
+    res.json({ message: 'Eskalations-Job ausgeführt', logs });
+  } catch (error) {
+    console.error('Escalation Error:', error);
+    res.status(500).json({ error: 'Fehler beim Eskalations-Job' });
   }
 };
