@@ -1,6 +1,19 @@
 version: '3.8'
 
 services:
+  database:
+    image: postgres:15-alpine
+    container_name: gefahrstoff_db
+    restart: always
+    environment:
+      POSTGRES_USER: gefahrstoff_user
+      POSTGRES_PASSWORD: super_secret_db_password
+      POSTGRES_DB: gefahrstoff_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
   backend:
     build:
       context: ./backend
@@ -9,9 +22,11 @@ services:
     restart: always
     ports:
       - "3000:3000"
+    depends_on:
+      - database
     environment:
-      # Prisma Database Connection
-      - DATABASE_URL=file:/app/prisma/data/dev.db
+      # Prisma Database Connection (PostgreSQL)
+      - DATABASE_URL=postgresql://gefahrstoff_user:super_secret_db_password@database:5432/gefahrstoff_db?schema=public
       - JWT_SECRET=super_secret_jwt_key_please_change
       # Senden von Mails etc. (Anpassen falls gewünscht)
       - SMTP_HOST=
@@ -20,8 +35,6 @@ services:
       - SMTP_PASS=
       - SMTP_FROM=
     volumes:
-      # Dauerhafter Speicher für die SQLite-Datenbank
-      - sqlite_data:/app/prisma/data
       # Dauerhafter Speicher für hochgeladene PDFs (SDB, Zertifikate)
       - upload_data:/app/uploads
       - sdb_data:/app/sdb-uploads
@@ -38,6 +51,6 @@ services:
       - backend
 
 volumes:
-  sqlite_data:
+  postgres_data:
   upload_data:
   sdb_data:

@@ -22,9 +22,6 @@ RUN npx tsc
 ENV NODE_ENV=production
 ENV PORT=3000
 
-# Erstelle Datenbankordner
-RUN mkdir -p /app/prisma/data
-
 # Erstelle ein Start-Skript für Prisma-Migrationen und Start
 RUN echo "npx prisma db push && node dist/index.js" > start.sh
 RUN chmod +x start.sh
