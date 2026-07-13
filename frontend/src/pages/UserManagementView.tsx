@@ -126,8 +126,8 @@ export const UserManagementView = () => {
                   >
                     <option value="VIEWER">Viewer</option>
                     <option value="LOCATION_MANAGER">Standortleiter</option>
-                    <option value="SAFETY_OFFICER">Sicherheitsbeauftragter</option>
-                    <option value="ADMIN">Administrator</option>
+                    <option value="SAFETY_OFFICER">Administrator (Unternehmen)</option>
+                    <option value="ADMIN">Superadmin (Entwickler)</option>
                   </select>
                 </td>
                 <td className="p-4">{new Date(user.createdAt).toLocaleDateString('de-DE')}</td>

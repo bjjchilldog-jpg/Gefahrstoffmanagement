@@ -2,8 +2,8 @@ import { useState, useEffect } from 'react';
 import { Users, Edit2, Save, X, CheckCircle, Ban, Clock, Shield, ShieldCheck, Eye, UserCog, AlertCircle } from 'lucide-react';
 
 const ROLE_LABELS: Record<string, string> = {
-  'ADMIN': 'Administrator',
-  'SAFETY_OFFICER': 'Fachkraft für Arbeitssicherheit (SiFa)',
+  'ADMIN': 'Superadmin (Entwickler)',
+  'SAFETY_OFFICER': 'Administrator (Unternehmen)',
   'LOCATION_MANAGER': 'Standortleitung',
   'VIEWER': 'Lesezugriff'
 };

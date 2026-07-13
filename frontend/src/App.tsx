@@ -165,8 +165,8 @@ function AppInner() {
                       {user?.firstName || ''} {user?.lastName || user?.email || ''}
                     </div>
                     <div className="text-xs text-slate-500">
-                      {user?.role === 'ADMIN' && '👑 Administrator'}
-                      {user?.role === 'SAFETY_OFFICER' && '🛡️ SiFa'}
+                      {user?.role === 'ADMIN' && '🛡️ Superadmin (Entwickler)'}
+                      {user?.role === 'SAFETY_OFFICER' && '🛡️ Administrator (Unternehmen)'}
                       {user?.role === 'LOCATION_MANAGER' && '📍 Standortleitung'}
                       {user?.role === 'VIEWER' && '👁️ Lesezugriff'}
                     </div>
