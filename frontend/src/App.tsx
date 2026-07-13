@@ -16,6 +16,7 @@ import { DatenschutzView } from './pages/DatenschutzView';
 import { AdminSettings } from './pages/AdminSettings';
 import { MasterMatrixView } from './pages/MasterMatrixView';
 import { LocationDetailView } from './pages/LocationDetailView';
+import { UserManagementView } from './pages/UserManagementView';
 import { GbuFormView } from './pages/GbuFormView';
 import { DocumentCenterView } from './pages/DocumentCenterView';
 import { AsbestosDocumentView } from './pages/AsbestosDocumentView';
@@ -196,16 +197,21 @@ function AppInner() {
                       Matrix
                     </Link>
                   </div>
-                  <div className="flex gap-2">
-                    {/* Personal — nur für ADMIN/SAFETY_OFFICER/LOCATION_MANAGER */}
-                    {(canManage || user?.role === 'LOCATION_MANAGER') && (
-                      <Link to="/employees" className="flex-1 flex items-center justify-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 p-2 rounded font-medium transition-colors" title="Personal">
-                        <Users className="w-4 h-4" />
+                    <div className="flex gap-2">
+                      {/* Personal – nur für ADMIN/SAFETY_OFFICER/LOCATION_MANAGER */}
+                      {(canManage || user?.role === 'LOCATION_MANAGER') && (
+                        <Link to="/employees" className="flex-1 flex items-center justify-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 p-2 rounded font-medium transition-colors" title="Personal">
+                          <Users className="w-4 h-4" />
+                        </Link>
+                      )}
+                      {isAdmin && (
+                        <Link to="/users" className="flex-1 flex items-center justify-center gap-2 bg-amber-100 hover:bg-amber-200 text-amber-800 p-2 rounded font-medium transition-colors" title="Benutzerverwaltung">
+                          <Shield className="w-4 h-4" />
+                        </Link>
+                      )}
+                      <Link to="/documents" className="flex-1 flex items-center justify-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 p-2 rounded font-medium transition-colors" title="Dokumenten-Center">
+                        <FileText className="w-4 h-4" />
                       </Link>
-                    )}
-                    <Link to="/documents" className="flex-1 flex items-center justify-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 p-2 rounded font-medium transition-colors" title="Dokumenten-Center">
-                      <FileText className="w-4 h-4" />
-                    </Link>
                     {/* LMS — nur für ADMIN/SAFETY_OFFICER */}
                     {canManage && (
                       <Link to="/lms/admin" className="flex-1 flex items-center justify-center gap-2 bg-indigo-100 hover:bg-indigo-200 text-indigo-700 p-2 rounded font-medium transition-colors" title="LMS Verwaltung">
@@ -275,6 +281,9 @@ function AppInner() {
                   {/* ADMIN-only Routen */}
                   <Route path="/settings" element={
                     isAdmin ? <AdminSettings /> : <Navigate to="/dashboard" replace />
+                  } />
+                  <Route path="/users" element={
+                    isAdmin ? <UserManagementView /> : <Navigate to="/dashboard" replace />
                   } />
                   
                   {/* LMS */}
