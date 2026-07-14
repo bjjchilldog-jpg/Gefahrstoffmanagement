@@ -260,7 +260,7 @@ export const GbuFormView = () => {
           setProductName(data.masterSubstance?.productName || '');
           setManufacturer(data.masterSubstance?.manufacturer || '');
           setSdbDate(data.masterSubstance?.sdbDate ? data.masterSubstance.sdbDate.split('T')[0] : '');
-          if (data.masterSubstance?.sdbFilePath) {
+          if (data.masterSubstance?.sdbFilePath && data.masterSubstance.sdbFilePath !== 'null' && data.masterSubstance.sdbFilePath !== 'undefined' && data.masterSubstance.sdbFilePath !== '') {
             setSdbFilePath(data.masterSubstance.sdbFilePath);
             // If the path doesn't start with http, /api, or /uploads, it might be invalid
             if (data.masterSubstance.sdbFilePath.startsWith('/')) {
