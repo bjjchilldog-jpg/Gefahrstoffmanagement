@@ -54,6 +54,7 @@ const upload = multer({ storage, limits: { fileSize: 100 * 1024 * 1024 } }); // 
 
 // Statische Dateien servieren (für hochgeladene Bilder/Videos)
 app.use('/uploads', express.static(uploadDir));
+app.use('/uploads', (req, res) => res.status(404).send('Die angeforderte Datei wurde auf dem Server nicht gefunden. (Wahrscheinlich wurde sie nicht hochgeladen oder gelöscht)'));
 
 // Neuer Upload-Endpunkt
 app.post('/api/upload', upload.single('file'), (req, res) => {
