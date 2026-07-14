@@ -401,10 +401,10 @@ Extrahiere folgende Daten:
 
     if (provider === 'gemini') {
       // ═══ Google Gemini (mit Retry bei 429/503) ═══
-      const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${apiKey}`;
+      const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
       const geminiBody = JSON.stringify({
         contents: [{ parts: [{ text: `${systemPrompt}\n\n${userMessage}` }] }],
-        generationConfig: { temperature: 0.1, maxOutputTokens: 2048 }
+        generationConfig: { temperature: 0.1, maxOutputTokens: 2048, responseMimeType: "application/json" }
       });
       
       let lastError = '';
