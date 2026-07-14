@@ -39,6 +39,9 @@ export default defineConfig({
     spaFallback(),
     VitePWA({
       registerType: 'autoUpdate',
+      workbox: {
+        navigateFallbackDenylist: [/^\/uploads/, /^\/api/]
+      },
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'masked-icon.svg'],
       manifest: {
         name: 'Gefahrstoff-Management',
