@@ -1,6 +1,9 @@
-FROM node:18-alpine
+FROM node:18-slim
 
 WORKDIR /app
+
+# Installiere OpenSSL für Prisma (notwendig für Debian Slim)
+RUN apt-get update && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
 
 # Kopiere Package-Dateien
 COPY package*.json ./
