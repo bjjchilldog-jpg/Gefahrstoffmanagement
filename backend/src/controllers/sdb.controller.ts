@@ -400,48 +400,54 @@ Extrahiere folgende Daten:
     let aiText = '';
 
     if (provider === 'gemini') {
-      // === Google Gemini (mit Retry bei 429/503) ===
-      const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+      // === Google Gemini Cascade (Auto-Fallback) ===
+      const fallbackModels = ['gemini-3.5-flash', 'gemini-2.5-flash', 'gemini-2.5-pro'];
       const geminiBody = JSON.stringify({
         contents: [{ parts: [{ text: `${systemPrompt}\n\n${userMessage}` }] }],
         generationConfig: { temperature: 0.1, maxOutputTokens: 2048, responseMimeType: "application/json" }
       });
       
       let lastError = '';
-      for (let attempt = 0; attempt < 3; attempt++) {
-        if (attempt > 0) {
-          const delay = Math.pow(2, attempt) * 1000; // 2s, 4s
-          console.log(`[SDB] Gemini Retry ${attempt}/3 in ${delay}ms...`);
-          await new Promise(r => setTimeout(r, delay));
-        }
+      for (const modelName of fallbackModels) {
+        const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
         
-        const response = await fetch(geminiUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: geminiBody
-        });
-        
-        if (response.ok) {
+        for (let attempt = 0; attempt < 2; attempt++) { // 2 Versuche pro Modell
+          if (attempt > 0) {
+            const delay = 1000;
+            console.log(`[SDB] Gemini Retry ${modelName} in ${delay}ms...`);
+            await new Promise(r => setTimeout(r, delay));
+          }
+          
+          const response = await fetch(geminiUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: geminiBody
+          });
+          
+          lastError = `${response.status}`;
+          
+          if (response.status === 429 || response.status === 503) {
+            console.warn(`[SDB] Gemini ${modelName} überlastet (${response.status}).`);
+            continue; // Retry gleiches Modell oder next Modell
+          }
+          
+          if (!response.ok) {
+            console.error(`[SDB] Gemini API ${response.status} für ${modelName}:`, await response.text());
+            break; // Fatal error for this model (e.g. 404), try next model
+          }
+          
           const data = await response.json();
-          aiText = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-          break;
+          let aiText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+          const cleaned = aiText.replace(/```json\s*/g, '').replace(/```\s*/g, '');
+          const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+          if (jsonMatch) {
+            return JSON.parse(jsonMatch[0]);
+          }
+          return null;
         }
-        
-        lastError = `${response.status}`;
-        if (response.status === 429 || response.status === 503) {
-          console.warn(`[SDB] Gemini ${response.status} (Versuch ${attempt + 1}/3)`);
-          continue; // Retry
-        }
-        
-        console.error(`[SDB] Gemini API ${response.status}:`, await response.text());
-        return null;
       }
-      
-      if (!aiText) {
-        console.error(`[SDB] Gemini alle Versuche fehlgeschlagen (letzter Fehler: ${lastError})`);
-        return null;
-      }
-
+      console.error(`[SDB] Gemini alle Modelle fehlgeschlagen. Letzter Status: ${lastError}`);
+      return null;
     } else if (provider === 'openai') {
       // ═══ OpenAI (GPT-4o-mini / GPT-4o) ═══
       const response = await fetch('https://api.openai.com/v1/chat/completions', {
