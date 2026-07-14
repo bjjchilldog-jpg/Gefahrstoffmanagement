@@ -201,17 +201,31 @@ export const SubstanceList = ({ selectedIds, onSelectIds }: any) => {
   };
 
   const handleDelete = async (deleteId: string) => {
-    if (!confirm("Diesen Eintrag wirklich löschen?")) return;
+    const isMultiDelete = selectedIds.includes(deleteId) && selectedIds.length > 1;
+    
+    if (isMultiDelete) {
+      if (!confirm(`Möchten Sie wirklich alle ${selectedIds.length} markierten Einträge unwiderruflich löschen?`)) return;
+    } else {
+      if (!confirm("Diesen Eintrag wirklich löschen?")) return;
+    }
+
     try {
-      const res = await fetch(`/api/substances/${deleteId}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('token') }` }
-      });
-      if (res.ok) {
-        fetchSubstances();
+      if (isMultiDelete) {
+        await Promise.all(selectedIds.map((id: string) => 
+          fetch(`/api/substances/${id}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('token') }` }
+          })
+        ));
+        onSelectIds([]);
       } else {
-        alert("Fehler beim Löschen.");
+        const res = await fetch(`/api/substances/${deleteId}`, {
+          method: 'DELETE',
+          headers: { 'Authorization': `Bearer ${localStorage.getItem('token') }` }
+        });
+        if (!res.ok) throw new Error();
       }
+      fetchSubstances();
     } catch (err) {
       alert("Fehler beim Löschen.");
     }
