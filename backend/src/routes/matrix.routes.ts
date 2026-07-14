@@ -7,6 +7,6 @@ const router = Router();
 
 router.get('/', authenticateToken, getMatrix);
 router.get('/reverse', authenticateToken, reverseSearch);
-router.post('/assign', authenticateToken, requireRoles(['ADMIN', 'UNIT_LEADER']), auditWrapper, assignMatrix);
+router.post('/assign', authenticateToken, requireRoles(['ADMIN', 'SAFETY_OFFICER', 'UNIT_LEADER']), auditWrapper, assignMatrix);
 
 export default router;
